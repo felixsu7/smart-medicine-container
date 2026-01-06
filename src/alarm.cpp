@@ -1,4 +1,6 @@
 #include "./alarm.h"
+#include "./utils.h"
+#include "config.h"
 #include "esp32-hal-log.h"
 #include "time.h"
 #include <cstddef>
@@ -9,19 +11,19 @@
 
 static const char *ALARM_TAG = "alarm";
 
-static AlarmStorage alarms;
+static AlarmsFile alarms;
 
-int loadAlarmStorage() {
-  if (load_file(ALARMS_FILENAME, (char *)&alarms, sizeof(alarms)) != 0) {
+int alarm_file_load(const char *filename) {
+  if (fs_load_file(filename, (char *)&alarms, sizeof(alarms)) != 0) {
     return 1;
   }
 
-  if (alarms.magic != ALARMS_FILE_MAGIC) {
+  if (alarms.magic != ALARM_MAGIC) {
     ESP_LOGE(ALARM_TAG, "magic mismatch: %04X", alarms.magic);
     return 2;
   }
 
-  if (alarms.version != ALARMS_FILE_VERSION) {
+  if (alarms.version != ALARM_VERSION) {
     ESP_LOGE(ALARM_TAG, "unsupported version: %02X", alarms.version);
     return 3;
   }
@@ -29,8 +31,8 @@ int loadAlarmStorage() {
   return 0;
 }
 
-int saveAlarmStorage() {
-  if (save_file(ALARMS_FILENAME, (char *)&alarms, sizeof(alarms)) != 0) {
+int alarm_file_save(const char *filename) {
+  if (fs_save_file(filename, (char *)&alarms, sizeof(alarms)) != 0) {
     return 1;
   }
   return 0;
@@ -72,7 +74,7 @@ bool is_zero(days target) {
   return true;
 }
 
-time_t next_schedule(Alarm *alarm, struct tm *now) {
+long alarm_next_schedule(const Alarm *alarm, const struct tm *now) {
   if (is_zero(alarm->days)) {
     return -1;
   }
@@ -101,13 +103,13 @@ time_t next_schedule(Alarm *alarm, struct tm *now) {
   return seconds;
 }
 
-Alarm *earliest_alarm(struct tm *now) {
+int alarm_earliest_alarm(const struct tm *now, Alarm *dest_alarm) {
   Alarm *earliest = NULL;
   for (int idx = 0; idx < MAX_ALARMS; idx++) {
     // ESP_LOGD(ALARM_TAG, "idx %d", idx);
-    Alarm *temp = &alarms.storage[idx];
+    Alarm *temp = &alarms.alarms[idx];
     if (temp->name[0] == 0x00) {
-      return earliest;
+      break;
     }
 
     if (earliest == NULL) {
@@ -115,35 +117,44 @@ Alarm *earliest_alarm(struct tm *now) {
       continue;
     }
 
-    if (next_schedule(temp, now) < next_schedule(earliest, now)) {
+    if (alarm_next_schedule(temp, now) < alarm_next_schedule(earliest, now)) {
       earliest = temp;
     }
   }
 
-  return earliest;
+  if (earliest == NULL) {
+    return 1;
+  } else {
+    printmem("dest_alarm", dest_alarm, sizeof(dest_alarm));
+    printmem("earliest", earliest, sizeof(earliest));
+    memcpy(dest_alarm, earliest, sizeof(Alarm));
+
+    return 0;
+  }
 }
 
-int setup_alarms() {
+int setup_alarm() {
   // if (!LittleFS.exists(ALARMS_FILENAME)) {
-  if (saveAlarmStorage() != 0) {
+  if (alarm_file_save(ALARMS_FILENAME) != 0) {
     return 1;
   };
   //
-  if (loadAlarmStorage() != 0) {
+  if (alarm_file_load(ALARMS_FILENAME) != 0) {
     return 1;
   };
   // };
+  //
 
-  strcpy(alarms.storage[0].name, "first");
-  alarms.storage[0].days.sunday = true;
-  alarms.storage[0].secondMark = 5;
+  strcpy(alarms.alarms[0].name, "first");
+  alarms.alarms[0].days.sunday = true;
+  alarms.alarms[0].secondMark = 5;
 
-  strcpy(alarms.storage[1].name, "second");
-  alarms.storage[1].days.monday = true;
-  alarms.storage[1].secondMark = 3;
+  strcpy(alarms.alarms[1].name, "second");
+  alarms.alarms[1].days.monday = true;
+  alarms.alarms[1].secondMark = 3;
 
-  strcpy(alarms.storage[2].name, "third");
-  alarms.storage[2].days.monday = true;
+  strcpy(alarms.alarms[2].name, "third");
+  alarms.alarms[2].days.monday = true;
 
   struct tm now;
   now.tm_sec = 0;
@@ -151,15 +162,16 @@ int setup_alarms() {
   now.tm_hour = 0;
   now.tm_wday = 0;
 
-  Alarm *test = earliest_alarm(&now);
+  Alarm test = {};
+  alarm_earliest_alarm(&now, &test);
 
-  ESP_LOGD(ALARM_TAG, "earliest: %s", test->name);
-  ESP_LOGD(ALARM_TAG, "%s: %d", alarms.storage[0].name,
-           next_schedule(&alarms.storage[0], &now));
-  ESP_LOGD(ALARM_TAG, "%s: %d", alarms.storage[1].name,
-           next_schedule(&alarms.storage[1], &now));
-  ESP_LOGD(ALARM_TAG, "%s: %d", alarms.storage[2].name,
-           next_schedule(&alarms.storage[2], &now));
+  ESP_LOGD(ALARM_TAG, "earliest: %s", test.name);
+  ESP_LOGD(ALARM_TAG, "%s: %d", alarms.alarms[0].name,
+           alarm_next_schedule(&alarms.alarms[0], &now));
+  ESP_LOGD(ALARM_TAG, "%s: %d", alarms.alarms[1].name,
+           alarm_next_schedule(&alarms.alarms[1], &now));
+  ESP_LOGD(ALARM_TAG, "%s: %d", alarms.alarms[2].name,
+           alarm_next_schedule(&alarms.alarms[2], &now));
 
   return 0;
 }

@@ -6,10 +6,10 @@
 
 static const char *MAIN_TAG = "main";
 
-#define LED 26
-#define BUTTON 25
-#define BUTTON_X 34
+#define LED 33
+#define BUTTON_X 32
 #define BUTTON_Y 35
+#define BUTTON_Z 34
 
 void must_succeed(int val) {
   if (val != 0) {
@@ -32,18 +32,17 @@ void setup() {
   esp_log_level_set("*", ESP_LOG_DEBUG);
 
   pinMode(LED, OUTPUT);
-  pinMode(BUTTON, INPUT_PULLDOWN);
-
-  // pinMode(BUTTON_X, INPUT_PULLDOWN);
-  // pinMode(BUTTON_Y, INPUT_PULLDOWN);
+  pinMode(BUTTON_X, INPUT_PULLDOWN);
+  pinMode(BUTTON_Y, INPUT_PULLDOWN);
+  pinMode(BUTTON_Z, INPUT_PULLDOWN);
 
   must_succeed(setup_fs());
 
   setup_wifi();
   // must_succeed(setup_time());
-  must_succeed(setup_alarms());
+  must_succeed(setup_alarm());
   if (WiFi.status() == WL_CONNECTED) {
-    setup_webserver();
+    setup_web();
   }
 
   // stepper.setRpm(16);
@@ -55,7 +54,7 @@ long notifyCooldown;
 int counter;
 
 void loop() {
-  reconnect_loop();
+  wifi_reconnect_loop();
 
   // if (digitalRead(BUTTON_X) == HIGH) {
   //   stepper.step(true);
@@ -66,13 +65,13 @@ void loop() {
   // }
   //
 
-  if (digitalRead(BUTTON) == HIGH) {
+  if (digitalRead(BUTTON_X) == HIGH) {
     if (notifyCooldown + 5 * 1000 < millis()) {
       char message[100];
       sprintf(message, "Hello world! (%d)", counter++);
 
       ESP_LOGD(MAIN_TAG, "sending test notification");
-      if (testNotify(message) == 200) {
+      if (web_test_notify(message) == 200) {
         digitalWrite(LED, HIGH);
         delay(250);
         digitalWrite(LED, LOW);

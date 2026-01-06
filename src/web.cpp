@@ -8,7 +8,7 @@ static const char *WEB_TAG = "web";
 
 PsychicHttpServer webserver(80);
 
-void setup_wifi() {
+int setup_wifi() {
   const char *wifi_ssid = DEFAULT_WIFI_SSID;
   const char *wifi_pass = DEFAULT_WIFI_PASS;
 
@@ -23,9 +23,10 @@ void setup_wifi() {
       break;
     }
   }
+  return 0;
 }
 
-void reconnect_loop() {
+int wifi_reconnect_loop() {
   static int lastReconnectCheck;
   if (WiFi.status() != WL_CONNECTED &&
       millis() > lastReconnectCheck + 1000 * 30) {
@@ -34,9 +35,10 @@ void reconnect_loop() {
     WiFi.reconnect();
     lastReconnectCheck = millis();
   }
+  return 0;
 }
 
-void setup_webserver() {
+int setup_web() {
   // webserver.on("/", HTTP_GET, [](AsyncWebServerRequest *r) {
   //   r->send(200, "text/html", "Hello!");
   // });
@@ -53,9 +55,10 @@ void setup_webserver() {
   // });
   //
   // webserver.begin();
+  return 0;
 }
 
-int testNotify(const char *message) {
+int web_test_notify(const char *message) {
   if (WiFi.status() != WL_CONNECTED) {
     ESP_LOGW(WEB_TAG, "not connected");
   }
