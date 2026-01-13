@@ -4,7 +4,7 @@
 #include "./config.h"
 #include <ctime>
 
-static const short ALARM_MAGIC = 0x5412;
+static const uint16_t ALARM_MAGIC = 0x5412;
 static const char ALARM_VERSION = 0x00;
 
 struct AlarmLog {
@@ -42,31 +42,39 @@ struct AlarmsFile {
   Alarm alarms[MAX_ALARMS];
 };
 
-int setup_alarm();
+int setup_alarm(void);
 
-int alarm_file_save(const char *filename);
-int alarm_file_load(const char *filename);
+int alarms_save(void);
 
-int alarm_add(const char *name, const struct days day, int secondMark);
-int alarm_get(char id, Alarm *dest_alarm);
-int alarm_remove(char id);
+int alarms_load(void);
 
-int alarm_set_name(char id, const char *name);
-int alarm_set_desc(char id, const char *desc);
-int alarm_set_category(char id, char category);
-int alarm_set_days(char id, bool sun, bool mon, bool tue, bool wed, bool thu,
-                   bool fri, bool sat);
-int alarm_set_days_amount(char id, int amount);
-int alarm_set_icon(char id, char icon);
-int alarm_set_color(char id, short color);
-int alarm_set_seconds(char id, int secondMark);
-int alarm_set_last_reminded(char id, int last_reminded);
-int alarm_append_log(char id, const struct AlarmLog *log);
-int alarm_get_logs(char id, struct AlarmLog **dest_logs);
-int alarm_clear_logs(char id);
+// Returns the idx of the newly created alarm, negative return values are error
+// codes. The newly created alarm will be placed in an index with invalid or
+// empty alarm.
+int alarm_add(const char *name, const struct days day, uint16_t secondMark);
 
-long alarm_next_schedule(const Alarm *alarm, const struct tm *now);
-int alarm_earliest_alarm(const struct tm *now, Alarm *dest_alarm);
-int alarm_sorted_list(Alarm **dest_alarms);
+// Copies src_alarm to the dest alarm with the idx.
+int alarm_set(int idx, const Alarm *src_alarm);
+
+// Copies src alarm with the idx to the dest_alarm. Returns -1 if there isn't
+// any valid alarm with the idx.
+int alarm_get(int idx, Alarm *dest_alarm);
+
+// Clears the alarm with the idx, the idx should be treated as an errorous
+// reference afterwards.
+int alarm_remove(int idx);
+
+// Appends a log to the alarm with the idx, if there is no room for new logs,
+// clears the oldest log.
+int alarm_append_log(int idx, const struct AlarmLog *log);
+
+// Returns when the alarm will ring, the timestamp is in seconds starting from
+// the UNIX epoch. This does not account for missed alarms!
+time_t alarm_next_schedule(const Alarm *alarm, const struct tm *now);
+
+// Returns when an alarm will ring, same return value as alarm_next__schedule,
+// and sets dest_alarm to the earliest alarm. This does not account for missing
+// alarms yet.
+time_t alarm_earliest_alarm(const struct tm *now, Alarm *dest_alarm);
 
 #endif

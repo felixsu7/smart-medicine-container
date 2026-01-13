@@ -20,27 +20,11 @@ struct PreferencesFile {
   char notify_url[64];
 };
 
-int setup_preferences();
+int setup_preferences(void);
 
-int preferences_load(const char *filename);
-int preferences_save(const char *filename);
+int preferences_load(void);
+int preferences_save(void);
 
-int preferences_set_web_pass(const char *src);
-int preferences_get_web_pass(char *dest);
-
-int preferences_get_wifi_config(const char *ssid, WiFiConfig *dest_config);
-int preferences_get_wifi_config(int counter, WiFiConfig *dest_config);
-int preferences_list_wifi_configs(WiFiConfig **dest_configs);
-int preferences_add_wifi_config(const WiFiConfig *config);
-int preferences_remove_wifi_config(const char *ssid);
-
-int preferences_set_gmt(const int gmt);
-int preferences_get_gmt();
-
-int preferences_set_daylight(const int daylight);
-int preferences_get_daylight();
-
-int preferences_set_notify_url(const char *src);
-int preferences_get_notify_url(char *dest);
-
+int preferences_set(const struct Preferences *src);
+int preferences_get(struct Preferences *dest);
 #endif

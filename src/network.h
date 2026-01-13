@@ -3,10 +3,10 @@
 
 // TODO: seperate wifi from web
 
-int setup_wifi();
-int setup_web();
+int setup_wifi(void);
+int setup_webserver(void);
 
-int wifi_reconnect_loop();
+int wifi_reconnect_loop(void);
 int web_test_notify(const char *message);
 
 #endif

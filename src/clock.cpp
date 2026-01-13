@@ -4,7 +4,7 @@
 
 static const char *CLOCK_TAG = "clock";
 
-int setup_clock() {
+int setup_clock(void) {
   int gmt_offset = GMT_OFFSET;
   int daylight_offset = DAYLIGHT_OFFSET;
 

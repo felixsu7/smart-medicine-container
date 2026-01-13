@@ -13,8 +13,8 @@ static const char *ALARM_TAG = "alarm";
 
 static AlarmsFile alarms;
 
-int alarm_file_load(const char *filename) {
-  if (fs_load_file(filename, (char *)&alarms, sizeof(alarms)) != 0) {
+int alarms_load(void) {
+  if (fs_load_file(ALARMS_FILENAME, (char *)&alarms, sizeof(alarms)) != 0) {
     return 1;
   }
 
@@ -31,8 +31,8 @@ int alarm_file_load(const char *filename) {
   return 0;
 }
 
-int alarm_file_save(const char *filename) {
-  if (fs_save_file(filename, (char *)&alarms, sizeof(alarms)) != 0) {
+int alarms_save(void) {
+  if (fs_save_file(ALARMS_FILENAME, (char *)&alarms, sizeof(alarms)) != 0) {
     return 1;
   }
   return 0;
@@ -74,7 +74,21 @@ bool is_zero(days target) {
   return true;
 }
 
-long alarm_next_schedule(const Alarm *alarm, const struct tm *now) {
+int alarm_get(int idx, Alarm *dest_alarm) {
+  if (idx < 0 || idx >= MAX_ALARMS) {
+    return -2;
+  }
+
+  Alarm alarm = alarms.alarms[idx];
+  if (alarm.name[0] == 0x00) {
+    return -1;
+  }
+
+  *dest_alarm = alarm;
+  return 0;
+}
+
+time_t alarm_next_schedule(const Alarm *alarm, const struct tm *now) {
   if (is_zero(alarm->days)) {
     return -1;
   }
@@ -103,7 +117,7 @@ long alarm_next_schedule(const Alarm *alarm, const struct tm *now) {
   return seconds;
 }
 
-int alarm_earliest_alarm(const struct tm *now, Alarm *dest_alarm) {
+time_t alarm_earliest_alarm(const struct tm *now, Alarm *dest_alarm) {
   Alarm *earliest = NULL;
   for (int idx = 0; idx < MAX_ALARMS; idx++) {
     // ESP_LOGD(ALARM_TAG, "idx %d", idx);
@@ -135,11 +149,11 @@ int alarm_earliest_alarm(const struct tm *now, Alarm *dest_alarm) {
 
 int setup_alarm() {
   // if (!LittleFS.exists(ALARMS_FILENAME)) {
-  if (alarm_file_save(ALARMS_FILENAME) != 0) {
-    return 1;
-  };
+  // if (alarms_save() != 0) {
+  //   return 1;
+  // };
   //
-  if (alarm_file_load(ALARMS_FILENAME) != 0) {
+  if (alarms_load() != 0) {
     return 1;
   };
   // };

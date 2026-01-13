@@ -51,7 +51,7 @@ int fs_save_file(const char *filename, char *src, size_t src_size) {
   return 0;
 }
 
-int setup_fs() {
+int setup_fs(void) {
   if (!LittleFS.begin()) {
     ESP_LOGE(FILES_TAG, "littlefs mount");
     return 1;
