@@ -1,40 +1,140 @@
 #include "./clock.h"
 #include "./config.h"
 #include "WiFi.h"
+#include <uRTCLib.h>
 
 static const char *CLOCK_TAG = "clock";
 
-int setup_clock(void) {
+uRTCLib rtc(0x68);
+
+int clock_sync_ntp(void) {
   int gmt_offset = GMT_OFFSET;
   int daylight_offset = DAYLIGHT_OFFSET;
 
-  // TODO: DS3231
   if (WiFi.status() != WL_CONNECTED) {
     ESP_LOGE(CLOCK_TAG, "no wifi for ntp");
     return 1;
   }
 
   struct tm timeInfo;
-  int retries = 0;
+  for (int i = 5; i > 0; i--) {
+    configTime(gmt_offset, daylight_offset, NTP_SERVER_PRI, NTP_SERVER_SEC,
+               NTP_SERVER_TRI);
 
-  configTime(gmt_offset, daylight_offset, NTP_SERVER_PRI, NTP_SERVER_SEC,
-             NTP_SERVER_TRI);
+    delay(5000);
 
-  time_t now;
-  time(&now);
-  localtime_r(&now, &timeInfo);
+    time_t now;
+    time(&now);
+    localtime_r(&now, &timeInfo);
 
-  if (timeInfo.tm_year < 125) {
-    ESP_LOGE(CLOCK_TAG, "year is not 2025 and onwards (got %d)",
-             timeInfo.tm_year);
-    return 1;
+    if (timeInfo.tm_year < 126) {
+      ESP_LOGE(CLOCK_TAG, "year is not 2026 and onwards (got %d)",
+               timeInfo.tm_year);
+    } else {
+      break;
+    }
+  }
+
+  if (timeInfo.tm_year < 126) {
+    ESP_LOGE(CLOCK_TAG, "sync from ntp failed entirely!");
+    return -1;
   }
 
   char buf[20];
-
   strftime(buf, 20, "%Y-%m-%d %H:%M:%S", &timeInfo);
 
-  ESP_LOGI(CLOCK_TAG, "current time: %s", buf);
+  ESP_LOGI(CLOCK_TAG, "current time from ntp: %s", buf);
 
   return 0;
+}
+
+int setup_clock(void) {
+  if (!URTCLIB_WIRE.begin()) {
+    return -1;
+  }
+
+  rtc.set_model(URTCLIB_MODEL_DS3231);
+
+  if (!rtc.refresh()) {
+    return -2;
+  }
+
+  if (!rtc.enableBattery()) {
+    ESP_LOGE(CLOCK_TAG, "cannot enable battery on rtc");
+    return -3;
+  }
+
+  if (rtc.getEOSCFlag()) {
+    ESP_LOGE(CLOCK_TAG, "eosc flag is true!");
+    return -4;
+  }
+
+  if (rtc.lostPower()) {
+    ESP_LOGW(CLOCK_TAG, "rtc module lost power");
+    if (clock_sync_ntp() != 0) {
+      return -5;
+    };
+    struct tm now;
+    if (clock_get(&now) != 0) {
+      return -6;
+    };
+
+    rtc.set(now.tm_sec, now.tm_min, now.tm_hour, now.tm_wday, now.tm_mday,
+            now.tm_mon, now.tm_year - 100);
+    if (!rtc.refresh()) {
+      return -7;
+    }
+
+    rtc.lostPowerClear();
+  } else {
+    struct tm now;
+    now.tm_sec = rtc.second();
+    now.tm_min = rtc.minute();
+    now.tm_hour = rtc.hour();
+    now.tm_mday = rtc.day();
+    now.tm_mon = rtc.month();
+    now.tm_year = rtc.year() + 100;
+
+    time_t now_sec = mktime(&now);
+    struct timeval val = {.tv_sec = now_sec};
+    struct timezone tz = {.tz_minuteswest = GMT_OFFSET / 60};
+    if (int err = settimeofday(&val, &tz); err != 0) {
+      return err;
+    }
+
+    struct tm test;
+    if (clock_get(&test) != 0) {
+      return -8;
+    };
+
+    if (test.tm_year < 126) {
+      ESP_LOGE(CLOCK_TAG, "whar? rtc tm year is not 2026 or onwards");
+      return -9;
+    }
+
+    char buf[20];
+
+    strftime(buf, 20, "%Y-%m-%d %H:%M:%S", &test);
+    ESP_LOGI(CLOCK_TAG, "current time from rtc: %s", buf);
+  }
+
+  return 0;
+}
+
+int clock_get(struct tm *dest_tm) {
+  for (int i = 5; i > 0; i--) {
+    time_t now;
+    time(&now);
+    localtime_r(&now, dest_tm);
+
+    if (dest_tm->tm_year < 126) {
+      ESP_LOGE(CLOCK_TAG, "year is not 2026 and onwards (got %d)",
+               dest_tm->tm_year);
+    } else {
+      return 0;
+    }
+  }
+
+  ESP_LOGE(CLOCK_TAG, "failed getting local time entirely");
+  return -1;
 }

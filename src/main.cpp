@@ -5,9 +5,9 @@
 #include "./thirdparty/stepper.h"
 #include "HardwareSerial.h"
 #include "WiFi.h"
+#include "clock.h"
 #include "esp32-hal-gpio.h"
 #include "fs.h"
-#include "uRTCLib.h"
 
 static const char *MAIN_TAG = "main";
 
@@ -22,7 +22,6 @@ void must_succeed(int val) {
 }
 
 CheapStepper stepper(STEPPER_IN1, STEPPER_IN2, STEPPER_IN3, STEPPER_IN4);
-uRTCLib rtc(0x68);
 
 void setup() {
   Serial.begin(115200);
@@ -37,40 +36,24 @@ void setup() {
   pinMode(PRI_BUTTON_PIN, INPUT_PULLDOWN);
   pinMode(SEC_BUTTON_PIN, INPUT_PULLDOWN);
 
-  must_succeed(setup_fs());
+  if (int err = setup_fs(); err != 0) {
+    // TODO FIXME
+    ESP_LOGW(MAIN_TAG, "setup_fs got %d, formatting fs and restarting...", err);
+    must_succeed(fs_format());
+    esp_restart();
+  };
 
   setup_wifi();
-  // must_succeed(setup_time());
-  URTCLIB_WIRE.begin();
+  must_succeed(setup_clock());
 
-  rtc.set(0, 42, 16, 6, 2, 5, 15);
+  if (int err = setup_alarm(); err != 0) {
+    // TODO FIXME
+    ESP_LOGW(MAIN_TAG, "setup_alarm got %d, formatting fs and restarting...",
+             err);
+    must_succeed(fs_format());
+    esp_restart();
+  };
 
-  rtc.refresh();
-
-  Serial.print("RTC DateTime: ");
-  Serial.print(rtc.year());
-  Serial.print('/');
-  Serial.print(rtc.month());
-  Serial.print('/');
-  Serial.print(rtc.day());
-
-  Serial.print(' ');
-
-  Serial.print(rtc.hour());
-  Serial.print(':');
-  Serial.print(rtc.minute());
-  Serial.print(':');
-  Serial.print(rtc.second());
-
-  Serial.print(" DOW: ");
-  Serial.print(rtc.dayOfWeek());
-
-  Serial.print(" - Temp: ");
-  Serial.print(rtc.temp() / 100);
-
-  Serial.println();
-
-  must_succeed(setup_alarm());
   if (WiFi.status() == WL_CONNECTED) {
     setup_webserver();
   }
@@ -79,8 +62,10 @@ void setup() {
   //
   ESP_LOGI(MAIN_TAG, "alarm size: %d", sizeof(Alarm));
   ESP_LOGI(MAIN_TAG, "alarm file size: %d", sizeof(AlarmsFile));
-  ESP_LOGI(MAIN_TAG, "preferences file stroage size: %d", sizeof(PreferencesFile));
+  ESP_LOGI(MAIN_TAG, "preferences file stroage size: %d",
+           sizeof(PreferencesFile));
   ESP_LOGI(MAIN_TAG, "wifi config size: %d", sizeof(WiFiConfig));
+  ESP_LOGI(MAIN_TAG, "days size: %d", sizeof(Days));
 
   ESP_LOGI(MAIN_TAG, "took %ldms to boot", millis());
 }

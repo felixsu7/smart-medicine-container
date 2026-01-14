@@ -13,19 +13,33 @@ static const char *ALARM_TAG = "alarm";
 
 static AlarmsFile alarms;
 
+char days_char(struct Days days) { return *(char *)&days; }
+
+struct Days char_days(char days) { return *(struct Days *)&days; }
+
 int alarms_load(void) {
-  if (fs_load_file(ALARMS_FILENAME, (char *)&alarms, sizeof(alarms)) != 0) {
-    return 1;
+  int err = fs_load_file(ALARMS_FILENAME, (char *)&alarms, sizeof(alarms));
+
+  if (err == 1) {
+    ESP_LOGI(ALARM_TAG, "creating new alarms file...");
+    if (alarms_save() != 0) {
+      return 1;
+    }
+  }
+
+  if (err == 2) {
+    ESP_LOGW(ALARM_TAG, "alarm struct size is different from alarm file");
+    return 2;
   }
 
   if (alarms.magic != ALARM_MAGIC) {
     ESP_LOGE(ALARM_TAG, "magic mismatch: %04X", alarms.magic);
-    return 2;
+    return 3;
   }
 
   if (alarms.version != ALARM_VERSION) {
     ESP_LOGE(ALARM_TAG, "unsupported version: %02X", alarms.version);
-    return 3;
+    return 4;
   }
 
   return 0;
@@ -38,40 +52,14 @@ int alarms_save(void) {
   return 0;
 }
 
-// TODO: could be improved with bitwise ops, maybe
-bool index_day(days target, int idx) {
-  switch (idx % 7) {
-  case 0:
-    return target.sunday;
-  case 1:
-    return target.monday;
-  case 2:
-    return target.tuesday;
-  case 3:
-    return target.wednesday;
-  case 4:
-    return target.thursday;
-  case 5:
-    return target.friday;
-  case 6:
-    return target.saturday;
-  default:
-    return false;
-  }
+bool index_day(char days, int idx) {
+  char mask = 1 << (idx % 7);
+  return days && mask;
 }
 
-bool is_zero(days target) {
-  // TODO
-  if (target.amountInstead) {
-    return true;
-  }
-  for (int i = 0; i < 7; i++) {
-    if (index_day(target, i)) {
-      return false;
-    }
-  }
-
-  return true;
+bool index_day(struct Days days, int idx) {
+  char mask = 1 << (idx % 7);
+  return days_char(days) && mask;
 }
 
 int alarm_get(int idx, Alarm *dest_alarm) {
@@ -84,12 +72,32 @@ int alarm_get(int idx, Alarm *dest_alarm) {
     return -1;
   }
 
-  *dest_alarm = alarm;
+  if (dest_alarm != NULL) {
+    *dest_alarm = alarm;
+  }
+  return 0;
+}
+
+int alarm_add(const struct Alarm *alarm) {
+  for (int i = 0; i < MAX_ALARMS; i++) {
+    if (alarm_get(i, NULL) == -1) {
+      alarm_set(i, alarm);
+      return i;
+    }
+  }
+  return -1;
+};
+
+int alarm_set(int idx, const struct Alarm *src_alarm) {
+  if (idx < 0 || idx >= MAX_ALARMS) {
+    return -1;
+  }
+  memcpy(&alarms.alarms[idx], src_alarm, sizeof(Alarm));
   return 0;
 }
 
 time_t alarm_next_schedule(const Alarm *alarm, const struct tm *now) {
-  if (is_zero(alarm->days)) {
+  if (days_char(alarm->days) == 0x00) {
     return -1;
   }
   int today = now->tm_wday;

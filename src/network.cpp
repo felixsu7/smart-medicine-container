@@ -2,6 +2,8 @@
 #include "HTTPClient.h"
 #include "PsychicHttpServer.h"
 #include "alarm.h"
+#include "clock.h"
+#include "utils.h"
 #include <./network.h>
 #include <WiFi.h>
 #include <string.h>
@@ -51,8 +53,85 @@ int setup_webserver(void) {
                  return res->send(code);
                });
 
-  // webserver.on(
-  // "/alarm", HTTP_POST, [](PsychicRequest *req, PsychicResponse *res) {
+  webserver.on(
+      "/alarm", HTTP_POST, [](PsychicRequest *req, PsychicResponse *res) {
+        char reply[sizeof(Alarm) * 3 + 3 + 1];
+        struct Alarm alarm;
+        memset(reply, 0, sizeof(reply));
+        memset(&alarm, 0, sizeof(Alarm));
+
+        if (req->hasParam("name")) {
+          // strncat(reply, req->getParam("name")->value().c_str(),
+          // sizeof(alarm.name) - 1);
+          strncpy(alarm.name, req->getParam("name")->value().c_str(),
+                  sizeof(alarm.name) - 1);
+          // strncat(reply, " ", 1);
+        }
+        if (req->hasParam("description")) {
+          // strncat(reply, req->getParam("description")->value().c_str(),
+          // sizeof(alarm.description) - 1);
+          strncpy(alarm.description,
+                  req->getParam("description")->value().c_str(),
+                  sizeof(alarm.description) - 1);
+          // strncat(reply, " ", 1);
+        }
+        if (req->hasParam("category")) {
+          // strncat(reply, req->getParam("category")->value().c_str(), 3);
+          alarm.category = (char)req->getParam("category")->value().toInt();
+          // strncat(reply, " ", 1);
+        }
+        if (req->hasParam("flags")) {
+          // strncat(reply, req->getParam("flags")->value().c_str(), 3);
+          alarm.flags = (char)req->getParam("flags")->value().toInt();
+          // strncat(reply, " ", 1);
+        }
+        if (req->hasParam("days")) {
+          // strncat(reply, req->getParam("days")->value().c_str(), 3);
+          alarm.days = char_days((char)req->getParam("days")->value().toInt());
+          // strncat(reply, " ", 1);
+        }
+        if (req->hasParam("icon")) {
+          // strncat(reply, req->getParam("icon")->value().c_str(), 3);
+          alarm.icon = (char)req->getParam("icon")->value().toInt();
+          // strncat(reply, " ", 1);
+        }
+        if (req->hasParam("color")) {
+          // strncat(reply, req->getParam("color")->value().c_str(), 4);
+          alarm.color = (short)req->getParam("color")->value().toInt();
+          // strncat(reply, " ", 1);
+        }
+        if (req->hasParam("second")) {
+          // strncat(reply, req->getParam("second")->value().c_str(), 5);
+          alarm.secondMark = req->getParam("second")->value().toInt();
+        }
+
+        int idx = alarm_add(&alarm);
+
+        alarms_save();
+
+        hexdump(reply, &alarm, sizeof(Alarm));
+
+        sprintf(reply + strlen(reply), "%02d\n", idx);
+
+        return res->send(reply);
+      });
+
+  webserver.on("/earliest_alarm", HTTP_GET,
+               [](PsychicRequest *req, PsychicResponse *res) {
+                 struct tm now;
+                 Alarm alarm;
+
+                 clock_get(&now);
+                 time_t when = alarm_earliest_alarm(&now, &alarm);
+
+                 char reply[sizeof(alarm) * 3 + 10 + 1];
+                 memset(reply, 0, sizeof(reply));
+
+                 hexdump(reply, &alarm, sizeof(Alarm));
+                 sprintf(reply + strlen(reply), "%ld\n", when);
+
+                 return res->send(reply);
+               });
   //   const String body = req->body();
   //   Alarm alarm;
   //   // TODO FIXME very unsafe, maybe use json?
