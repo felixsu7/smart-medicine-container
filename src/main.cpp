@@ -2,7 +2,6 @@
 #include "./network.h"
 #include "./pins.h"
 #include "./preferences.h"
-#include "./thirdparty/stepper.h"
 #include "HardwareSerial.h"
 #include "WiFi.h"
 #include "clock.h"
@@ -11,17 +10,7 @@
 
 static const char *MAIN_TAG = "main";
 
-void must_succeed(int val) {
-  if (val != 0) {
-    ESP_LOGE(MAIN_TAG, "must_succeed got %d, looping", val);
-    while (true) {
-      Serial.print(".");
-      delay(1000);
-    };
-  }
-}
-
-CheapStepper stepper(STEPPER_IN1, STEPPER_IN2, STEPPER_IN3, STEPPER_IN4);
+// CheapStepper stepper(STEPPER_IN1, STEPPER_IN2, STEPPER_IN3, STEPPER_IN4);
 
 void setup() {
   Serial.begin(115200);
@@ -39,18 +28,18 @@ void setup() {
   if (int err = setup_fs(); err != 0) {
     // TODO FIXME
     ESP_LOGW(MAIN_TAG, "setup_fs got %d, formatting fs and restarting...", err);
-    must_succeed(fs_format());
+    assert(fs_format() == 0);
     esp_restart();
   };
 
   setup_wifi();
-  must_succeed(setup_clock());
+  assert(setup_clock() == 0);
 
   if (int err = setup_alarm(); err != 0) {
     // TODO FIXME
     ESP_LOGW(MAIN_TAG, "setup_alarm got %d, formatting fs and restarting...",
              err);
-    must_succeed(fs_format());
+    assert(fs_format() == 0);
     esp_restart();
   };
 
@@ -76,18 +65,9 @@ int counter;
 void loop() {
   wifi_reconnect_loop();
 
-  // if (digitalRead(BUTTON_X) == HIGH) {
+  // if (digitalRead(SEC_BUTTON_PIN) == HIGH) {
   //   stepper.step(true);
   // }
-  //
-  // if (digitalRead(BUTTON_Y) == HIGH) {
-  //   stepper.step(false);
-  // }
-  //
-  //
-  if (digitalRead(SEC_BUTTON_PIN) == HIGH) {
-    stepper.step(true);
-  }
 
   if (digitalRead(PRI_BUTTON_PIN) == HIGH) {
     if (notifyCooldown + 5 * 1000 < millis()) {

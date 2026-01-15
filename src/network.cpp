@@ -87,7 +87,7 @@ int setup_webserver(void) {
         }
         if (req->hasParam("days")) {
           // strncat(reply, req->getParam("days")->value().c_str(), 3);
-          alarm.days = char_days((char)req->getParam("days")->value().toInt());
+          alarm.days = (char)req->getParam("days")->value().toInt();
           // strncat(reply, " ", 1);
         }
         if (req->hasParam("icon")) {
@@ -116,6 +116,28 @@ int setup_webserver(void) {
         return res->send(reply);
       });
 
+  webserver.on(
+      "/alarm", HTTP_DELETE, [](PsychicRequest *req, PsychicResponse *res) {
+        // TODO FIXME what?
+        if (!req->hasParam("idx")) {
+          ESP_LOGW(WEB_TAG, "no idx param");
+          return res->send(400);
+        }
+
+        int err = alarm_set(req->getParam("idx")->value().toInt(), NULL);
+
+        ESP_LOGW(WEB_TAG, "err is %d", err);
+        ESP_LOGW(WEB_TAG, "idx is %d", req->getParam("idx")->value().toInt());
+
+        if (err != 0) {
+          return res->send(400);
+        }
+
+        assert(alarms_save() == 0);
+
+        return res->send(200);
+      });
+
   webserver.on("/earliest_alarm", HTTP_GET,
                [](PsychicRequest *req, PsychicResponse *res) {
                  struct tm now;
@@ -124,56 +146,34 @@ int setup_webserver(void) {
                  clock_get(&now);
                  time_t when = alarm_earliest_alarm(&now, &alarm);
 
-                 char reply[sizeof(alarm) * 3 + 10 + 1];
+                 char reply[50 + 10 + 1];
                  memset(reply, 0, sizeof(reply));
 
-                 hexdump(reply, &alarm, sizeof(Alarm));
-                 sprintf(reply + strlen(reply), "%ld\n", when);
+                 sprintf(reply, "%s %ld", alarm.name, when);
 
                  return res->send(reply);
                });
-  //   const String body = req->body();
-  //   Alarm alarm;
-  //   // TODO FIXME very unsafe, maybe use json?
-  //   int success =
-  //       sscanf(body.c_str(),
-  //              "name:\"%s\" description:\"%s\" category:%hhu flags:%hhu "
-  //              "days:%hhu icon:%hhu color:%hu secondMark:%ld",
-  //              alarm.name, alarm.description, alarm.category, alarm.flags,
-  //              alarm.days, alarm.icon, alarm.color, alarm.secondMark);
-  //
-  //   // if (success != 8) {
-  //   //   char msg[10];
-  //   //   sprintf(msg, "%d", success);
-  //   //   return res->send(400, "text/plain", msg);
-  //   // }
-  //
-  //   char msg_part[200];
-  //   sprintf(msg_part,
-  //           "idx:%d name:%s days:%02X sec:%d category:%02X flags:%02X "
-  //           "icon:%02X "
-  //           "lastReminded:%ld\n",
-  //           -1, alarm.name, 0, alarm.secondMark, alarm.category,
-  //           alarm.flags, alarm.icon, alarm.lastReminded);
-  //
-  //   return res->send(msg_part);
-  // });
 
   webserver.on(
       "/alarms", HTTP_GET, [](PsychicRequest *req, PsychicResponse *res) {
+        struct tm now;
+        clock_get(&now);
+
         for (int i = 0; i < MAX_ALARMS; i++) {
           Alarm alarm;
           if (int err = alarm_get(i, &alarm); err < 0) {
             continue;
           };
 
-          char msg_part[200];
-          sprintf(msg_part,
-                  "idx:%d name:%s days:%02X sec:%d category:%02X flags:%02X "
-                  "icon:%02X "
-                  "lastReminded:%ld\n",
-                  i, alarm.name, 0, alarm.secondMark, alarm.category,
-                  alarm.flags, alarm.icon, alarm.lastReminded);
+          // TODO FIXME this check shouldnt be necessary at all.
+          if (alarm.days == 0) {
+            continue;
+          }
+
+          char msg_part[100];
+          sprintf(msg_part, "%d: '%s' days:%02X sec:%d earliest_alarm:%d\n", i,
+                  alarm.name, alarm.days, alarm.secondMark,
+                  alarm_next_schedule(&alarm, now.tm_wday));
 
           if (int err = res->sendChunk((uint8_t *)msg_part, strlen(msg_part));
               err != 0) {

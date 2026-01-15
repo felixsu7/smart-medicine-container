@@ -49,31 +49,20 @@ int clock_sync_ntp(void) {
 }
 
 int setup_clock(void) {
-  if (!URTCLIB_WIRE.begin()) {
-    return -1;
-  }
+  assert(URTCLIB_WIRE.begin());
 
   rtc.set_model(URTCLIB_MODEL_DS3231);
 
-  if (!rtc.refresh()) {
-    return -2;
-  }
-
-  if (!rtc.enableBattery()) {
-    ESP_LOGE(CLOCK_TAG, "cannot enable battery on rtc");
-    return -3;
-  }
-
-  if (rtc.getEOSCFlag()) {
-    ESP_LOGE(CLOCK_TAG, "eosc flag is true!");
-    return -4;
-  }
+  assert(rtc.refresh());
+  assert(rtc.enableBattery());
+  assert(!rtc.getEOSCFlag());
 
   if (rtc.lostPower()) {
     ESP_LOGW(CLOCK_TAG, "rtc module lost power");
     if (clock_sync_ntp() != 0) {
       return -5;
     };
+
     struct tm now;
     if (clock_get(&now) != 0) {
       return -6;
@@ -103,14 +92,9 @@ int setup_clock(void) {
     }
 
     struct tm test;
-    if (clock_get(&test) != 0) {
-      return -8;
-    };
 
-    if (test.tm_year < 126) {
-      ESP_LOGE(CLOCK_TAG, "whar? rtc tm year is not 2026 or onwards");
-      return -9;
-    }
+    assert(clock_get(&test) == 0);
+    assert(test.tm_year >= 126);
 
     char buf[20];
 

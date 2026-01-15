@@ -11,6 +11,4 @@ int clock_sync_ntp(void);
 
 int clock_get(struct tm *dest_tm);
 
-time_t clock_get_epoch(void);
-
 #endif

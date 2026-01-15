@@ -8,14 +8,3 @@ int hexdump(char *dest, void *src, size_t src_size) {
   }
   return dump_size;
 }
-
-int printmem(const char *msg, void *src, size_t size) {
-  if (src == NULL) {
-    ESP_LOGW("printmem", "(%s) pointer is null!", msg);
-    return -1;
-  }
-  char dump[size * 3 + 1];
-  int res = hexdump(dump, src, size);
-  printf("%s dump: %s", msg, dump);
-  return res;
-}
