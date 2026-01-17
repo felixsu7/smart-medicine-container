@@ -8,7 +8,7 @@
 #include <WiFi.h>
 #include <string.h>
 
-static const char *WEB_TAG = "web";
+static const char *TAG = "web";
 
 PsychicHttpServer webserver(80);
 
@@ -16,14 +16,14 @@ int setup_wifi(void) {
   const char *wifi_ssid = DEFAULT_WIFI_SSID;
   const char *wifi_pass = DEFAULT_WIFI_PASS;
 
-  ESP_LOGD(WEB_TAG, "connecting to %s with pass %s", wifi_ssid, wifi_pass);
+  ESP_LOGD(TAG, "connecting to %s with pass %s", wifi_ssid, wifi_pass);
   WiFi.begin(wifi_ssid, wifi_pass);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(200);
 
     if (WiFi.status() == WL_CONNECT_FAILED) {
-      ESP_LOGW(WEB_TAG, "connect failed, continuing...");
+      ESP_LOGW(TAG, "connect failed, continuing...");
       break;
     }
   }
@@ -34,7 +34,7 @@ int wifi_reconnect_loop(void) {
   static int lastReconnectCheck;
   if (WiFi.status() != WL_CONNECTED &&
       millis() > lastReconnectCheck + 1000 * 30) {
-    ESP_LOGW(WEB_TAG, "disconnected, reconnecting...");
+    ESP_LOGW(TAG, "disconnected, reconnecting...");
     WiFi.disconnect();
     WiFi.reconnect();
     lastReconnectCheck = millis();
@@ -120,14 +120,14 @@ int setup_webserver(void) {
       "/alarm", HTTP_DELETE, [](PsychicRequest *req, PsychicResponse *res) {
         // TODO FIXME what?
         if (!req->hasParam("idx")) {
-          ESP_LOGW(WEB_TAG, "no idx param");
+          ESP_LOGW(TAG, "no idx param");
           return res->send(400);
         }
 
         int err = alarm_set(req->getParam("idx")->value().toInt(), NULL);
 
-        ESP_LOGW(WEB_TAG, "err is %d", err);
-        ESP_LOGW(WEB_TAG, "idx is %d", req->getParam("idx")->value().toInt());
+        ESP_LOGW(TAG, "err is %d", err);
+        ESP_LOGW(TAG, "idx is %d", req->getParam("idx")->value().toInt());
 
         if (err != 0) {
           return res->send(400);
@@ -177,7 +177,7 @@ int setup_webserver(void) {
 
           if (int err = res->sendChunk((uint8_t *)msg_part, strlen(msg_part));
               err != 0) {
-            ESP_LOGE(WEB_TAG, "sendChunk returned %d", err);
+            ESP_LOGE(TAG, "sendChunk returned %d", err);
             res->send(500);
             return err;
           }
@@ -191,7 +191,7 @@ int setup_webserver(void) {
 
 int web_test_notify(const char *message) {
   if (WiFi.status() != WL_CONNECTED) {
-    ESP_LOGW(WEB_TAG, "not connected");
+    ESP_LOGW(TAG, "not connected");
   }
 
   WiFiClient client;
@@ -199,7 +199,7 @@ int web_test_notify(const char *message) {
 
   http.begin(client, NOTIFY_URL);
   int resp = http.POST(message);
-  ESP_LOGD(WEB_TAG, "resp: %d", resp);
+  ESP_LOGD(TAG, "resp: %d", resp);
   http.end();
   return resp;
 }

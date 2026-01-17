@@ -3,6 +3,6 @@
 
 #include <cstdio>
 
-int hexdump(char *dest, void *src, size_t src_size);
+int hexdump(char *dest, void *src, size_t size);
 
 #endif

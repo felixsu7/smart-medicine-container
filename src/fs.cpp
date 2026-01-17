@@ -4,28 +4,27 @@
 #include <cstddef>
 
 static const bool DEBUG_DUMP = true;
-static const char *FILES_TAG = "files";
+static const char *TAG = "files";
 
-int fs_load_file(const char *filename, char *dest, size_t dest_size) {
-  File file = LittleFS.open(filename, FILE_READ);
+int fs_load_file(const char *path, char *dest, size_t size) {
+  File file = LittleFS.open(path, FILE_READ);
   if (!file || file.isDirectory()) {
-    ESP_LOGE(FILES_TAG, "opening %s for reading.", filename);
+    ESP_LOGE(TAG, "opening %s for reading.", path);
     return -1;
   }
 
-  size_t res = file.readBytes(dest, dest_size);
-  if (res != dest_size) {
-    ESP_LOGE(FILES_TAG, "reading from %s, res %d, size %d", filename, res,
-             dest_size);
+  size_t res = file.readBytes(dest, size);
+  if (res != size) {
+    ESP_LOGE(TAG, "reading from %s, res %d, size %d", path, res, size);
     return -2;
   };
 
   // FIXME: sloppy code
   if (DEBUG_DUMP) {
     char dump[256 * 3 + 1];
-    int res = hexdump(dump, dest, dest_size);
+    int res = hexdump(dump, dest, size);
 
-    ESP_LOGD(FILES_TAG, "first %d bytes dump of %s: %s", res, filename, dump);
+    ESP_LOGD(TAG, "first %d bytes dump of %s: %s", res, path, dump);
   }
 
   file.close();
@@ -33,16 +32,15 @@ int fs_load_file(const char *filename, char *dest, size_t dest_size) {
   return 0;
 }
 
-int fs_save_file(const char *filename, char *src, size_t src_size) {
-  File file = LittleFS.open(filename, FILE_WRITE);
+int fs_save_file(const char *path, const char *src, size_t size) {
+  File file = LittleFS.open(path, FILE_WRITE);
   if (!file || file.isDirectory()) {
-    ESP_LOGE(FILES_TAG, "opening %s for writing", filename);
+    ESP_LOGE(TAG, "opening %s for writing", path);
     return -1;
   }
 
-  if (size_t res = file.write((uint8_t *)src, src_size); res != src_size) {
-    ESP_LOGE(FILES_TAG, "writing to %s, res %d, size %d", filename, res,
-             src_size);
+  if (size_t res = file.write((uint8_t *)src, size); res != size) {
+    ESP_LOGE(TAG, "writing to %s, res %d, size %d", path, res, size);
     return -2;
   };
 
@@ -51,9 +49,9 @@ int fs_save_file(const char *filename, char *src, size_t src_size) {
   return 0;
 }
 
-int fs_format(void) {
+bool fs_format(void) {
   assert(LittleFS.format());
-  return 0;
+  return true;
 }
 
 int setup_fs(void) {
@@ -62,7 +60,7 @@ int setup_fs(void) {
     esp_restart();
   }
 
-  ESP_LOGI(FILES_TAG, "fs size: %ld/%ld\n", LittleFS.usedBytes(),
+  ESP_LOGI(TAG, "fs size: %ld/%ld\n", LittleFS.usedBytes(),
            LittleFS.totalBytes());
 
   return 0;

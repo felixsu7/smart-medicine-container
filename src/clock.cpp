@@ -3,7 +3,7 @@
 #include "WiFi.h"
 #include <uRTCLib.h>
 
-static const char *CLOCK_TAG = "clock";
+static const char *TAG = "clock";
 
 uRTCLib rtc(0x68);
 
@@ -12,7 +12,7 @@ int clock_sync_ntp(void) {
   int daylight_offset = DAYLIGHT_OFFSET;
 
   if (WiFi.status() != WL_CONNECTED) {
-    ESP_LOGE(CLOCK_TAG, "no wifi for ntp");
+    ESP_LOGE(TAG, "no wifi for ntp");
     return 1;
   }
 
@@ -28,22 +28,21 @@ int clock_sync_ntp(void) {
     localtime_r(&now, &timeInfo);
 
     if (timeInfo.tm_year < 126) {
-      ESP_LOGE(CLOCK_TAG, "year is not 2026 and onwards (got %d)",
-               timeInfo.tm_year);
+      ESP_LOGE(TAG, "year is not 2026 and onwards (got %d)", timeInfo.tm_year);
     } else {
       break;
     }
   }
 
   if (timeInfo.tm_year < 126) {
-    ESP_LOGE(CLOCK_TAG, "sync from ntp failed entirely!");
+    ESP_LOGE(TAG, "sync from ntp failed entirely!");
     return -1;
   }
 
   char buf[20];
   strftime(buf, 20, "%Y-%m-%d %H:%M:%S", &timeInfo);
 
-  ESP_LOGI(CLOCK_TAG, "current time from ntp: %s", buf);
+  ESP_LOGI(TAG, "current time from ntp: %s", buf);
 
   return 0;
 }
@@ -58,20 +57,20 @@ int setup_clock(void) {
   assert(!rtc.getEOSCFlag());
 
   if (rtc.lostPower()) {
-    ESP_LOGW(CLOCK_TAG, "rtc module lost power");
+    ESP_LOGW(TAG, "rtc module lost power");
     if (clock_sync_ntp() != 0) {
-      return -5;
+      return -1;
     };
 
     struct tm now;
     if (clock_get(&now) != 0) {
-      return -6;
+      return -2;
     };
 
     rtc.set(now.tm_sec, now.tm_min, now.tm_hour, now.tm_wday, now.tm_mday,
             now.tm_mon, now.tm_year - 100);
     if (!rtc.refresh()) {
-      return -7;
+      return -3;
     }
 
     rtc.lostPowerClear();
@@ -99,7 +98,7 @@ int setup_clock(void) {
     char buf[20];
 
     strftime(buf, 20, "%Y-%m-%d %H:%M:%S", &test);
-    ESP_LOGI(CLOCK_TAG, "current time from rtc: %s", buf);
+    ESP_LOGI(TAG, "current time from rtc: %s", buf);
   }
 
   return 0;
@@ -112,13 +111,12 @@ int clock_get(struct tm *dest_tm) {
     localtime_r(&now, dest_tm);
 
     if (dest_tm->tm_year < 126) {
-      ESP_LOGE(CLOCK_TAG, "year is not 2026 and onwards (got %d)",
-               dest_tm->tm_year);
+      ESP_LOGE(TAG, "year is not 2026 and onwards (got %d)", dest_tm->tm_year);
     } else {
       return 0;
     }
   }
 
-  ESP_LOGE(CLOCK_TAG, "failed getting local time entirely");
+  ESP_LOGE(TAG, "failed getting local time entirely");
   return -1;
 }
