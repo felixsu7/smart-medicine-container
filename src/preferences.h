@@ -1,7 +1,6 @@
 #ifndef PREFERENCES_H
 #define PREFERENCES_H
 
-static const short PREFERENCES_MAGIC = 0x1234;
 static const char PREFERENCES_VERSION = 0x00;
 
 struct WiFiConfig {
@@ -11,9 +10,8 @@ struct WiFiConfig {
 };
 
 struct PreferencesFile {
-  short magic = PREFERENCES_MAGIC;
   char version = PREFERENCES_VERSION;
-  char web_password[32];
+  char web_password[32]; // For auth on the webapp.
   WiFiConfig wifi_configs[25];
   int gmt_offset;
   int daylight_offset;
@@ -27,4 +25,5 @@ int preferences_save(void);
 
 int preferences_set(const struct Preferences *src);
 int preferences_get(struct Preferences *dest);
+
 #endif

@@ -5,10 +5,11 @@
 
 int setup_clock(void);
 
-// Syncs the local time from a NTP server, then also syncs the new time to the
-// RTC Module.
+// Fetches the updated time from a set of NTP servers, and sets the system's
+// time and the RTC module to it. Returns -1 if it cannot fetch the time.
 int clock_sync_ntp(void);
 
-int clock_get(struct tm *dest_tm);
+// Helper function that also checks for correctness.
+int clock_get(struct tm *now);
 
 #endif

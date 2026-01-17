@@ -57,7 +57,10 @@ int fs_format(void) {
 }
 
 int setup_fs(void) {
-  assert(LittleFS.begin());
+  if (!LittleFS.begin()) {
+    assert(fs_format());
+    esp_restart();
+  }
 
   ESP_LOGI(FILES_TAG, "fs size: %ld/%ld\n", LittleFS.usedBytes(),
            LittleFS.totalBytes());

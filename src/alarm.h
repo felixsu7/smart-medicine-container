@@ -23,15 +23,16 @@ struct AlarmLog {
 };
 
 struct Alarm {
-  char name[51]; // 25+1 null and so on...
-  char description[101];
+  char name[50];
+  char description[100];
   char category;
   char flags;
-  char days;
+  char days; // See the Days Enum.
   char icon;
-  short color;    // just use a nice byte to rgb formula for this lol
-  int secondMark; // Starting from GMT+0 Midnight
-  time_t lastReminded;
+  short color;         // Just use a nice formula for this.
+  int secondMark;      // Starting from GMT+0 Midnight
+  time_t lastReminded; // When the user has last attended this alarm, for
+                       // detecting missed alarms.
   AlarmLog logs[5];
 };
 
@@ -46,30 +47,39 @@ int alarms_save(void);
 
 int alarms_load(void);
 
-// Returns the idx of the newly created alarm, negative return values are error
-// codes. The newly created alarm will be placed in an index with invalid or
-// empty alarm.
-int alarm_add(const struct Alarm *src_alarm);
+// Adds a copy of alarm into the storage and returns the index of the added
+// alarm. Returns -1 if the storage is full. The added alarm will be at an index
+// where there is an empty or invalid alarm.
+int alarm_add(const struct Alarm *alarm);
 
-// Copies src_alarm to the dest alarm with the idx. If src_alarm is NULL, clears
-// it instead.
-int alarm_set(int idx, const struct Alarm *src_alarm);
+// Copies alarm to the storage on the specified index. Returns -1 if the
+// index is out of bounds. If alarm is NULL, clears it instead.
+int alarm_set(int idx, const struct Alarm *alarm);
 
-// Copies src alarm with the idx to the dest_alarm. Returns -1 if there isn't
-// any valid alarm with the idx.
-int alarm_get(int idx, struct Alarm *dest_alarm);
+// Copies the alarm from storage with specified index to alarm. Returns
+// Returns -1 if the index is out of bounds. Returns -2 if the index is invalid
+// or empty. If alarm is NULL, no copying is done, just checks for
+// validity.
+int alarm_get(int idx, struct Alarm *alarm);
 
-// Appends a log to the alarm with the idx, if there is no room for new logs,
-// clears the oldest log.
-int alarm_append_log(int idx, const struct AlarmLog *log);
+// Adds the log into the alarm in storage with specified index. If there is no
+// room for new logs, clears the oldest log and place the new log there instead.
+// Returns -1 if the index is out of bounds.
+int alarm_log(int idx, const struct AlarmLog *log);
 
 // Returns when the alarm will ring in seconds since today's midnight. This does
-// not account for missed alarms!
+// not account for missed alarms. Returns -1 if today is out of bounds. Returns
+// -2 if alarm data is invalid.
 int alarm_next_schedule(const struct Alarm *alarm, char today);
 
-// Returns when an alarm will ring in seconds since the UNIX epoch, and sets
-// dest_alarm to the earliest alarm. This does not account for missing alarms
-// yet. Returns -1 if there are no valid alarms.
-time_t alarm_earliest_alarm(const struct tm *now, Alarm *dest_alarm);
+// Returns the seconds since the UNIX timestamp of when the alarm will ring
+// based on seconds since today's midnight. Returns -1 if alarm is invalid.
+time_t alarm_epoch(const struct Alarm *alarm, const struct tm *now, int secs);
+
+// Returns when any alarm in the storage will ring in seconds since the UNIX
+// epoch, and copies that alarm to the alarm. This does not account for missing
+// alarms yet. If alarm is NULL, no copying will be done. Returns -1 if there
+// are no valid alarms.
+time_t alarm_earliest_alarm(const struct tm *now, Alarm *alarm);
 
 #endif
