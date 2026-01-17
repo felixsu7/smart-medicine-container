@@ -42,7 +42,7 @@ int wifi_reconnect_loop(void) {
   return 0;
 }
 
-int setup_webserver(void) {
+int setup_webserver(Alarms *alarms) {
   webserver.on("/", HTTP_GET, [](PsychicRequest *req, PsychicResponse *res) {
     return res->send("Hello!");
   });
@@ -54,7 +54,7 @@ int setup_webserver(void) {
                });
 
   webserver.on(
-      "/alarm", HTTP_POST, [](PsychicRequest *req, PsychicResponse *res) {
+      "/alarm", HTTP_POST, [=](PsychicRequest *req, PsychicResponse *res) {
         char reply[sizeof(Alarm) * 3 + 3 + 1];
         struct Alarm alarm;
         memset(reply, 0, sizeof(reply));
@@ -105,9 +105,9 @@ int setup_webserver(void) {
           alarm.secondMark = req->getParam("second")->value().toInt();
         }
 
-        int idx = alarm_add(&alarm);
+        int idx = alarms->add(&alarm);
 
-        alarms_save();
+        alarms->save_into_fs();
 
         hexdump(reply, &alarm, sizeof(Alarm));
 
@@ -117,14 +117,14 @@ int setup_webserver(void) {
       });
 
   webserver.on(
-      "/alarm", HTTP_DELETE, [](PsychicRequest *req, PsychicResponse *res) {
+      "/alarm", HTTP_DELETE, [=](PsychicRequest *req, PsychicResponse *res) {
         // TODO FIXME what?
         if (!req->hasParam("idx")) {
           ESP_LOGW(TAG, "no idx param");
           return res->send(400);
         }
 
-        int err = alarm_set(req->getParam("idx")->value().toInt(), NULL);
+        int err = alarms->set(req->getParam("idx")->value().toInt(), NULL);
 
         ESP_LOGW(TAG, "err is %d", err);
         ESP_LOGW(TAG, "idx is %d", req->getParam("idx")->value().toInt());
@@ -133,18 +133,18 @@ int setup_webserver(void) {
           return res->send(400);
         }
 
-        assert(alarms_save() == 0);
+        assert(alarms->save_into_fs() == 0);
 
         return res->send(200);
       });
 
   webserver.on("/earliest_alarm", HTTP_GET,
-               [](PsychicRequest *req, PsychicResponse *res) {
+               [=](PsychicRequest *req, PsychicResponse *res) {
                  struct tm now;
                  Alarm alarm;
 
                  clock_get(&now);
-                 time_t when = alarm_earliest_alarm(&now, &alarm);
+                 time_t when = alarms->earliest_alarm(&now, &alarm);
 
                  char reply[50 + 10 + 1];
                  memset(reply, 0, sizeof(reply));
@@ -155,13 +155,13 @@ int setup_webserver(void) {
                });
 
   webserver.on(
-      "/alarms", HTTP_GET, [](PsychicRequest *req, PsychicResponse *res) {
+      "/alarms", HTTP_GET, [=](PsychicRequest *req, PsychicResponse *res) {
         struct tm now;
         clock_get(&now);
 
         for (int i = 0; i < MAX_ALARMS; i++) {
           Alarm alarm;
-          if (int err = alarm_get(i, &alarm); err < 0) {
+          if (int err = alarms->get(i, &alarm); err < 0) {
             continue;
           };
 
@@ -173,7 +173,7 @@ int setup_webserver(void) {
           char msg_part[100];
           sprintf(msg_part, "%d: '%s' days:%02X sec:%d earliest_alarm:%d\n", i,
                   alarm.name, alarm.days, alarm.secondMark,
-                  alarm_next_schedule(&alarm, now.tm_wday));
+                  alarms->next_schedule(&alarm, now.tm_wday));
 
           if (int err = res->sendChunk((uint8_t *)msg_part, strlen(msg_part));
               err != 0) {

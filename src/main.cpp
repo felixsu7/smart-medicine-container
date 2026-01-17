@@ -10,6 +10,9 @@
 
 static const char *TAG = "main";
 
+Filesystem filesystem;
+Alarms alarms;
+
 void setup() {
   Serial.begin(115200);
   while (!Serial) {
@@ -23,20 +26,18 @@ void setup() {
   pinMode(PRI_BUTTON_PIN, INPUT_PULLDOWN);
   pinMode(SEC_BUTTON_PIN, INPUT_PULLDOWN);
 
-  assert(setup_fs() == 0);
   setup_wifi();
   assert(setup_clock() == 0);
-  assert(setup_alarm() == 0);
 
   if (WiFi.status() == WL_CONNECTED) {
-    assert(setup_webserver() == 0);
+    assert(setup_webserver(&alarms) == 0);
   }
 
   ESP_LOGI(TAG, "alarm size: %d", sizeof(Alarm));
-  ESP_LOGI(TAG, "alarm file size: %d", sizeof(AlarmsFile));
+  ESP_LOGI(TAG, "alarm file size: %d", sizeof(Alarms));
+  ESP_LOGI(TAG, "alarm log file size: %d", sizeof(AlarmLog));
   ESP_LOGI(TAG, "preferences file stroage size: %d", sizeof(PreferencesFile));
   ESP_LOGI(TAG, "wifi config size: %d", sizeof(WiFiConfig));
-  ESP_LOGI(TAG, "days size: %d", sizeof(Days));
 
   ESP_LOGI(TAG, "took %ldms to boot", millis());
 }

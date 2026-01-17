@@ -4,9 +4,10 @@
 #include <cstddef>
 
 static const bool DEBUG_DUMP = true;
-static const char *TAG = "files";
 
-int fs_load_file(const char *path, char *dest, size_t size) {
+static const char *TAG = "fs";
+
+int Filesystem::read(const char *path, char *dest, size_t size) {
   File file = LittleFS.open(path, FILE_READ);
   if (!file || file.isDirectory()) {
     ESP_LOGE(TAG, "opening %s for reading.", path);
@@ -32,7 +33,7 @@ int fs_load_file(const char *path, char *dest, size_t size) {
   return 0;
 }
 
-int fs_save_file(const char *path, const char *src, size_t size) {
+int Filesystem::write(const char *path, const char *src, size_t size) {
   File file = LittleFS.open(path, FILE_WRITE);
   if (!file || file.isDirectory()) {
     ESP_LOGE(TAG, "opening %s for writing", path);
@@ -49,19 +50,17 @@ int fs_save_file(const char *path, const char *src, size_t size) {
   return 0;
 }
 
-bool fs_format(void) {
+bool Filesystem::format(void) {
   assert(LittleFS.format());
   return true;
 }
 
-int setup_fs(void) {
+Filesystem::Filesystem(void) {
   if (!LittleFS.begin()) {
-    assert(fs_format());
+    assert(format());
     esp_restart();
   }
 
   ESP_LOGI(TAG, "fs size: %ld/%ld\n", LittleFS.usedBytes(),
            LittleFS.totalBytes());
-
-  return 0;
 }

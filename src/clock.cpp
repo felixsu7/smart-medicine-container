@@ -8,8 +8,8 @@ static const char *TAG = "clock";
 uRTCLib rtc(0x68);
 
 int clock_sync_ntp(void) {
-  int gmt_offset = GMT_OFFSET;
-  int daylight_offset = DAYLIGHT_OFFSET;
+  int gmt_offset = DEFAULT_GMT_OFFSET_SECS;
+  int daylight_offset = DEFAULT_DAYLIGHT_OFFSET_SECS;
 
   if (WiFi.status() != WL_CONNECTED) {
     ESP_LOGE(TAG, "no wifi for ntp");
@@ -85,7 +85,7 @@ int setup_clock(void) {
 
     time_t now_sec = mktime(&now);
     struct timeval val = {.tv_sec = now_sec};
-    struct timezone tz = {.tz_minuteswest = GMT_OFFSET / 60};
+    struct timezone tz = {.tz_minuteswest = DEFAULT_GMT_OFFSET_SECS / 60};
     if (int err = settimeofday(&val, &tz); err != 0) {
       return err;
     }

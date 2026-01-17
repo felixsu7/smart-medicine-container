@@ -11,14 +11,12 @@
 
 static const char *TAG = "alarm";
 
-static AlarmsFile alarms;
-
-int alarms_load(void) {
-  int err = fs_load_file(ALARMS_FILENAME, (char *)&alarms, sizeof(alarms));
+int Alarms::load_from_fs(void) {
+  int err = Filesystem::read(ALARMS_PATH, (char *)&alarms, sizeof(alarms));
 
   if (err == -1) {
     ESP_LOGI(TAG, "creating new alarms file...");
-    assert(alarms_save() == 0);
+    assert(save_into_fs() == 0);
   }
 
   if (err == -2) {
@@ -26,49 +24,49 @@ int alarms_load(void) {
     return -1;
   }
 
-  if (alarms.version != ALARM_VERSION) {
-    ESP_LOGE(TAG, "unsupported version: %02X", alarms.version);
+  if (version != ALARM_VERSION) {
+    ESP_LOGE(TAG, "unsupported version: %02X", version);
     return -2;
   }
 
   return 0;
 }
 
-int alarms_save(void) {
-  assert(fs_save_file(ALARMS_FILENAME, (char *)&alarms, sizeof(alarms)) == 0);
+int Alarms::save_into_fs(void) {
+  assert(Filesystem ::read(ALARMS_PATH, (char *)&alarms, sizeof(alarms)) == 0);
   return 0;
 }
 
-int alarm_add(const struct Alarm *alarm) {
+int Alarms::add(const struct Alarm *alarm) {
   for (int i = 0; i < MAX_ALARMS; i++) {
-    if (alarm_get(i, NULL) == -2) {
-      alarm_set(i, alarm);
+    if (get(i, NULL) == -2) {
+      set(i, alarm);
       return i;
     }
   }
   return -1;
 };
 
-int alarm_set(int idx, const struct Alarm *alarm) {
+int Alarms::set(int idx, const struct Alarm *alarm) {
   if (idx < 0 || idx >= MAX_ALARMS) {
     return -1;
   }
 
   if (alarm == NULL) {
-    memset(&alarms.alarms[idx], 0, sizeof(alarms.alarms[0]));
+    memset(&alarms[idx], 0, sizeof(alarms[0]));
     return 0;
   }
 
-  memcpy(&alarms.alarms[idx], alarm, sizeof(Alarm));
+  memcpy(&alarms[idx], alarm, sizeof(Alarm));
   return 0;
 }
 
-int alarm_get(int idx, struct Alarm *alarm) {
+int Alarms::get(int idx, struct Alarm *alarm) {
   if (idx < 0 || idx >= MAX_ALARMS) {
     return -1;
   }
 
-  Alarm a = alarms.alarms[idx];
+  Alarm a = alarms[idx];
   if (a.name[0] == 0x00) {
     return -2;
   }
@@ -80,7 +78,7 @@ int alarm_get(int idx, struct Alarm *alarm) {
   return 0;
 }
 
-int alarm_next_schedule(const struct Alarm *alarm, char today) {
+int Alarms::next_schedule(const struct Alarm *alarm, char today) {
   if (today > 7) {
     return -1;
   }
@@ -114,22 +112,22 @@ int alarm_next_schedule(const struct Alarm *alarm, char today) {
   assert(false);
 }
 
-time_t alarm_earliest_alarm(const struct tm *now, struct Alarm *alarm) {
+time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm) {
   Alarm *earliest = NULL;
   int earliest_second = INT_MAX;
   for (int idx = 0; idx < MAX_ALARMS; idx++) {
-    Alarm test = alarms.alarms[idx];
+    Alarm test = alarms[idx];
     if (test.name[0] == 0 || (test.days & 127) == 0x00) {
       continue;
     }
 
     if (earliest == NULL) {
       earliest = &test;
-      earliest_second = alarm_next_schedule(earliest, now->tm_wday);
+      earliest_second = next_schedule(earliest, now->tm_wday);
       continue;
     }
 
-    int test_second = alarm_next_schedule(&test, now->tm_wday);
+    int test_second = next_schedule(&test, now->tm_wday);
 
     if (earliest_second > test_second) {
       earliest = &test;
@@ -157,9 +155,9 @@ time_t alarm_earliest_alarm(const struct tm *now, struct Alarm *alarm) {
   }
 }
 
-int setup_alarm(void) {
-  if (int err = alarms_load(); err == -2) {
-    assert(fs_format());
+Alarms::Alarms(void) {
+  if (int err = load_from_fs(); err == -2) {
+    assert(Filesystem::format());
     esp_restart();
   } else if (err != 0) {
     abort();
@@ -167,16 +165,16 @@ int setup_alarm(void) {
   // };
   //
 
-  strcpy(alarms.alarms[0].name, "first");
-  alarms.alarms[0].days |= SUNDAY;
-  alarms.alarms[0].secondMark = 5;
+  strcpy(alarms[0].name, "first");
+  alarms[0].days |= SUNDAY;
+  alarms[0].secondMark = 5;
 
-  strcpy(alarms.alarms[1].name, "second");
-  alarms.alarms[1].days |= MONDAY;
-  alarms.alarms[1].secondMark = 3;
+  strcpy(alarms[1].name, "second");
+  alarms[1].days |= MONDAY;
+  alarms[1].secondMark = 3;
 
-  strcpy(alarms.alarms[2].name, "third");
-  alarms.alarms[2].days |= MONDAY;
+  strcpy(alarms[2].name, "third");
+  alarms[2].days |= MONDAY;
 
   struct tm now;
   now.tm_sec = 0;
@@ -185,15 +183,10 @@ int setup_alarm(void) {
   now.tm_wday = 0;
 
   Alarm test = {};
-  alarm_earliest_alarm(&now, &test);
+  earliest_alarm(&now, &test);
 
   ESP_LOGD(TAG, "earliest: %s", test.name);
-  ESP_LOGD(TAG, "%s: %d", alarms.alarms[0].name,
-           alarm_next_schedule(&alarms.alarms[0], 0));
-  ESP_LOGD(TAG, "%s: %d", alarms.alarms[1].name,
-           alarm_next_schedule(&alarms.alarms[1], 0));
-  ESP_LOGD(TAG, "%s: %d", alarms.alarms[2].name,
-           alarm_next_schedule(&alarms.alarms[2], 0));
-
-  return 0;
+  ESP_LOGD(TAG, "%s: %d", alarms[0].name, next_schedule(&alarms[0], 0));
+  ESP_LOGD(TAG, "%s: %d", alarms[1].name, next_schedule(&alarms[1], 0));
+  ESP_LOGD(TAG, "%s: %d", alarms[2].name, next_schedule(&alarms[2], 0));
 }
