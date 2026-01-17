@@ -38,7 +38,7 @@ struct Alarm {
 
 class Alarms {
 public:
-  Alarms();
+  int setup(void);
 
   int load_from_fs(void);
   int save_into_fs(void);
@@ -49,8 +49,10 @@ public:
   // validity.
   int get(int idx, struct Alarm *alarm);
 
-  // Copies alarm to the storage on the specified index. Returns -1 if the
-  // index is out of bounds. If alarm is NULL, clears it instead.
+  // Copies alarm to the storage on the specified index. If alarm is NULL,
+  // clears it instead. If index is -1, checks for validty for the alarm instead
+  // of setting. Returns -1 if the index is out of bounds. Returns -2 if both
+  // the index is -1 and alarm is NULL. Returns -3 if alarm is invalid.
   int set(int idx, const struct Alarm *alarm);
 
   // Adds a copy of alarm into the storage and returns the index of the added
@@ -69,10 +71,10 @@ public:
   // if there are no valid alarms.
   time_t earliest_alarm(const struct tm *now, Alarm *alarm);
 
-  // Returns when the alarm will ring in seconds since today's midnight. This
-  // does not account for missed alarms. Returns -1 if today is out of bounds.
-  // Returns -2 if alarm data is invalid.
-  static int next_schedule(const struct Alarm *alarm, char today);
+  // Returns when the alarm will ring in seconds based on today (0-6) and secs
+  // since GMT+0 midnight. This does not account for missed alarms. Returns -1
+  // if today is out of bounds. Returns -2 if alarm data is invalid.
+  static int next_schedule(const struct Alarm *alarm, char today, int sec);
 
   // Returns the seconds since the UNIX timestamp of when the alarm will ring
   // based on seconds since today's midnight. Returns -1 if alarm is invalid.

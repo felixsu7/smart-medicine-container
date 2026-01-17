@@ -5,9 +5,7 @@
 
 static const char *TAG = "clock";
 
-uRTCLib rtc(0x68);
-
-int clock_sync_ntp(void) {
+int Clock::sync_ntp(void) {
   int gmt_offset = DEFAULT_GMT_OFFSET_SECS;
   int daylight_offset = DEFAULT_DAYLIGHT_OFFSET_SECS;
 
@@ -16,38 +14,37 @@ int clock_sync_ntp(void) {
     return 1;
   }
 
-  struct tm timeInfo;
+  struct tm now;
   for (int i = 5; i > 0; i--) {
+    // TODO FIXME make the system GMT+0 internally
     configTime(gmt_offset, daylight_offset, NTP_SERVER_PRI, NTP_SERVER_SEC,
                NTP_SERVER_TRI);
 
     delay(5000);
 
-    time_t now;
-    time(&now);
-    localtime_r(&now, &timeInfo);
+    get(&now);
 
-    if (timeInfo.tm_year < 126) {
-      ESP_LOGE(TAG, "year is not 2026 and onwards (got %d)", timeInfo.tm_year);
+    if (now.tm_year < 126) {
+      ESP_LOGE(TAG, "year is not 2026 and onwards (got %d)", now.tm_year);
     } else {
       break;
     }
   }
 
-  if (timeInfo.tm_year < 126) {
+  if (now.tm_year < 126) {
     ESP_LOGE(TAG, "sync from ntp failed entirely!");
     return -1;
   }
 
   char buf[20];
-  strftime(buf, 20, "%Y-%m-%d %H:%M:%S", &timeInfo);
+  strftime(buf, 20, "%Y-%m-%d %H:%M:%S", &now);
 
   ESP_LOGI(TAG, "current time from ntp: %s", buf);
 
   return 0;
 }
 
-int setup_clock(void) {
+int Clock::setup(void) {
   assert(URTCLIB_WIRE.begin());
 
   rtc.set_model(URTCLIB_MODEL_DS3231);
@@ -58,20 +55,17 @@ int setup_clock(void) {
 
   if (rtc.lostPower()) {
     ESP_LOGW(TAG, "rtc module lost power");
-    if (clock_sync_ntp() != 0) {
-      return -1;
-    };
+    assert(sync_ntp() == 0);
 
     struct tm now;
-    if (clock_get(&now) != 0) {
-      return -2;
-    };
+    assert(get(&now) == 0);
 
     rtc.set(now.tm_sec, now.tm_min, now.tm_hour, now.tm_wday, now.tm_mday,
             now.tm_mon, now.tm_year - 100);
-    if (!rtc.refresh()) {
-      return -3;
-    }
+
+    assert(rtc.refresh() == true);
+
+    assert(sync_ntp());
 
     rtc.lostPowerClear();
   } else {
@@ -86,13 +80,11 @@ int setup_clock(void) {
     time_t now_sec = mktime(&now);
     struct timeval val = {.tv_sec = now_sec};
     struct timezone tz = {.tz_minuteswest = DEFAULT_GMT_OFFSET_SECS / 60};
-    if (int err = settimeofday(&val, &tz); err != 0) {
-      return err;
-    }
+    assert(settimeofday(&val, &tz) == 0);
 
     struct tm test;
 
-    assert(clock_get(&test) == 0);
+    assert(get(&test) == 0);
     assert(test.tm_year >= 126);
 
     char buf[20];
@@ -104,11 +96,10 @@ int setup_clock(void) {
   return 0;
 }
 
-int clock_get(struct tm *dest_tm) {
+int Clock::get(struct tm *dest_tm) {
   for (int i = 5; i > 0; i--) {
-    time_t now;
-    time(&now);
-    localtime_r(&now, dest_tm);
+    time_t now = time(NULL);
+    gmtime_r(&now, dest_tm);
 
     if (dest_tm->tm_year < 126) {
       ESP_LOGE(TAG, "year is not 2026 and onwards (got %d)", dest_tm->tm_year);

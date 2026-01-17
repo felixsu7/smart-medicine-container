@@ -1,5 +1,6 @@
 #include "./config.h"
 #include "HTTPClient.h"
+#include "LittleFS.h"
 #include "PsychicHttpServer.h"
 #include "alarm.h"
 #include "clock.h"
@@ -10,9 +11,7 @@
 
 static const char *TAG = "web";
 
-PsychicHttpServer webserver(80);
-
-int setup_wifi(void) {
+int Wifi::setup(void) {
   const char *wifi_ssid = DEFAULT_WIFI_SSID;
   const char *wifi_pass = DEFAULT_WIFI_PASS;
 
@@ -30,7 +29,7 @@ int setup_wifi(void) {
   return 0;
 }
 
-int wifi_reconnect_loop(void) {
+int Wifi::reconnect_loop(void) {
   static int lastReconnectCheck;
   if (WiFi.status() != WL_CONNECTED &&
       millis() > lastReconnectCheck + 1000 * 30) {
@@ -42,18 +41,18 @@ int wifi_reconnect_loop(void) {
   return 0;
 }
 
-int setup_webserver(Alarms *alarms) {
-  webserver.on("/", HTTP_GET, [](PsychicRequest *req, PsychicResponse *res) {
+int Webserver::setup(Alarms *alarms) {
+  server.on("/", HTTP_GET, [](PsychicRequest *req, PsychicResponse *res) {
     return res->send("Hello!");
   });
 
-  webserver.on("/test_notify", HTTP_POST,
-               [](PsychicRequest *req, PsychicResponse *res) {
-                 int code = web_test_notify(req->body().c_str());
-                 return res->send(code);
-               });
+  server.on("/test_notify", HTTP_POST,
+            [](PsychicRequest *req, PsychicResponse *res) {
+              int code = test_notify(req->body().c_str());
+              return res->send(code);
+            });
 
-  webserver.on(
+  server.on(
       "/alarm", HTTP_POST, [=](PsychicRequest *req, PsychicResponse *res) {
         char reply[sizeof(Alarm) * 3 + 3 + 1];
         struct Alarm alarm;
@@ -107,6 +106,10 @@ int setup_webserver(Alarms *alarms) {
 
         int idx = alarms->add(&alarm);
 
+        if (idx == -2) {
+          return res->send(400);
+        }
+
         alarms->save_into_fs();
 
         hexdump(reply, &alarm, sizeof(Alarm));
@@ -116,7 +119,7 @@ int setup_webserver(Alarms *alarms) {
         return res->send(reply);
       });
 
-  webserver.on(
+  server.on(
       "/alarm", HTTP_DELETE, [=](PsychicRequest *req, PsychicResponse *res) {
         // TODO FIXME what?
         if (!req->hasParam("idx")) {
@@ -138,26 +141,26 @@ int setup_webserver(Alarms *alarms) {
         return res->send(200);
       });
 
-  webserver.on("/earliest_alarm", HTTP_GET,
-               [=](PsychicRequest *req, PsychicResponse *res) {
-                 struct tm now;
-                 Alarm alarm;
+  server.on("/earliest_alarm", HTTP_GET,
+            [=](PsychicRequest *req, PsychicResponse *res) {
+              struct tm now;
+              Alarm alarm;
 
-                 clock_get(&now);
-                 time_t when = alarms->earliest_alarm(&now, &alarm);
+              Clock::get(&now);
+              time_t when = alarms->earliest_alarm(&now, &alarm);
 
-                 char reply[50 + 10 + 1];
-                 memset(reply, 0, sizeof(reply));
+              char reply[50 + 10 + 1];
+              memset(reply, 0, sizeof(reply));
 
-                 sprintf(reply, "%s %ld", alarm.name, when);
+              sprintf(reply, "%s %ld", alarm.name, when);
 
-                 return res->send(reply);
-               });
+              return res->send(reply);
+            });
 
-  webserver.on(
+  server.on(
       "/alarms", HTTP_GET, [=](PsychicRequest *req, PsychicResponse *res) {
         struct tm now;
-        clock_get(&now);
+        Clock::get(&now);
 
         for (int i = 0; i < MAX_ALARMS; i++) {
           Alarm alarm;
@@ -166,14 +169,16 @@ int setup_webserver(Alarms *alarms) {
           };
 
           // TODO FIXME this check shouldnt be necessary at all.
-          if (alarm.days == 0) {
+          if (alarms->set(-1, &alarm)) {
             continue;
           }
 
           char msg_part[100];
+          int today_sec =
+              (now.tm_hour * 60 * 60) + (now.tm_min * 60) + now.tm_sec;
           sprintf(msg_part, "%d: '%s' days:%02X sec:%d earliest_alarm:%d\n", i,
                   alarm.name, alarm.days, alarm.secondMark,
-                  alarms->next_schedule(&alarm, now.tm_wday));
+                  alarms->next_schedule(&alarm, now.tm_wday, today_sec));
 
           if (int err = res->sendChunk((uint8_t *)msg_part, strlen(msg_part));
               err != 0) {
@@ -186,10 +191,19 @@ int setup_webserver(Alarms *alarms) {
         return res->finishChunking();
       });
 
-  return webserver.begin();
+  // TODO FIXME WARNING
+  server.on("/clearalldata", HTTP_DELETE,
+            [](PsychicRequest *req, PsychicResponse *res) {
+              assert(LittleFS.format());
+              res->send(200);
+              esp_restart();
+              return 0;
+            });
+
+  return server.begin();
 }
 
-int web_test_notify(const char *message) {
+int Webserver::test_notify(const char *message) {
   if (WiFi.status() != WL_CONNECTED) {
     ESP_LOGW(TAG, "not connected");
   }

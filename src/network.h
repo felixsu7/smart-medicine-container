@@ -1,14 +1,22 @@
 #ifndef WEB_H
 #define WEB_H
 
+#include "PsychicHttpServer.h"
 #include "alarm.h"
 
-// TODO: seperate wifi from web
+class Wifi {
+public:
+  int setup(void);
+  static int reconnect_loop(void);
+};
 
-int setup_wifi(void);
-int setup_webserver(Alarms *alarms);
+class Webserver {
+public:
+  int setup(Alarms *alarms);
+  static int test_notify(const char *message);
 
-int wifi_reconnect_loop(void);
-int web_test_notify(const char *message);
+private:
+  PsychicHttpServer server;
+};
 
 #endif

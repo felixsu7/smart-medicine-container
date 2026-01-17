@@ -1,43 +1,68 @@
 #include "./alarm.h"
+#include "LittleFS.h"
 #include "config.h"
 #include "esp32-hal-log.h"
 #include "time.h"
+#include "utils.h"
 #include <Esp.h>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include <fs.h>
 
 static const char *TAG = "alarm";
 
 int Alarms::load_from_fs(void) {
-  int err = Filesystem::read(ALARMS_PATH, (char *)&alarms, sizeof(alarms));
+  char data[sizeof(alarms) + 1];
+  memset(data, 0, sizeof(data));
 
-  if (err == -1) {
-    ESP_LOGI(TAG, "creating new alarms file...");
-    assert(save_into_fs() == 0);
-  }
+  File file = LittleFS.open(ALARMS_PATH, FILE_READ);
+  assert(file && !file.isDirectory());
 
-  if (err == -2) {
-    ESP_LOGW(TAG, "alarm struct size is different from alarm file");
-    return -1;
-  }
+  size_t res = file.readBytes(data, sizeof(data));
+  if (res != sizeof(data)) {
+    ESP_LOGE(TAG, "reading from %s, res %d, size %d", ALARMS_PATH, res,
+             sizeof(data));
+    return -2;
+  };
+
+  file.close();
+
+  // TODO DEBUG
+  char dump[256 * 3 + 1];
+  int dump_res = hexdump(dump, data, sizeof(data));
+  ESP_LOGD(TAG, "first %d bytes dump of %s: %s", res, ALARMS_PATH, dump);
 
   if (version != ALARM_VERSION) {
     ESP_LOGE(TAG, "unsupported version: %02X", version);
-    return -2;
+    return -1;
   }
 
   return 0;
 }
 
 int Alarms::save_into_fs(void) {
-  assert(Filesystem ::read(ALARMS_PATH, (char *)&alarms, sizeof(alarms)) == 0);
+  // TODO FIXME BROKEN
+  File file = LittleFS.open(ALARMS_PATH, FILE_WRITE);
+
+  assert(file && !file.isDirectory());
+  assert(file.write(version) == 1);
+
+  for (int i = 0; i < MAX_ALARMS; i++) {
+    assert(file.write((uint8_t *)&alarms[i], sizeof(Alarm)) == sizeof(Alarm));
+  }
+
+  file.flush();
+  file.close();
+
   return 0;
 }
 
 int Alarms::add(const struct Alarm *alarm) {
+  // FIXME?
+  if (set(-1, alarm) == -3) {
+    return -2;
+  }
   for (int i = 0; i < MAX_ALARMS; i++) {
     if (get(i, NULL) == -2) {
       set(i, alarm);
@@ -48,12 +73,25 @@ int Alarms::add(const struct Alarm *alarm) {
 };
 
 int Alarms::set(int idx, const struct Alarm *alarm) {
-  if (idx < 0 || idx >= MAX_ALARMS) {
+  // FIXME not returning -3 if the alarm invalid
+  if (idx < -1 || idx >= MAX_ALARMS) {
     return -1;
+  }
+
+  if (idx == -1 && alarm == NULL) {
+    return -2;
   }
 
   if (alarm == NULL) {
     memset(&alarms[idx], 0, sizeof(alarms[0]));
+    return 0;
+  }
+
+  if (alarm->name[0] == 0x00 || (alarms->days & 127) == 0x00) {
+    return -3;
+  }
+
+  if (idx == -1) {
     return 0;
   }
 
@@ -67,7 +105,7 @@ int Alarms::get(int idx, struct Alarm *alarm) {
   }
 
   Alarm a = alarms[idx];
-  if (a.name[0] == 0x00) {
+  if (set(-1, &a) == -3) {
     return -2;
   }
 
@@ -78,7 +116,8 @@ int Alarms::get(int idx, struct Alarm *alarm) {
   return 0;
 }
 
-int Alarms::next_schedule(const struct Alarm *alarm, char today) {
+int Alarms::next_schedule(const struct Alarm *alarm, char today,
+                          int today_sec) {
   if (today > 7) {
     return -1;
   }
@@ -86,26 +125,26 @@ int Alarms::next_schedule(const struct Alarm *alarm, char today) {
     return -2;
   }
 
-  ESP_LOGD(TAG, "today %d", today);
-  ESP_LOGD(TAG, "days %d", alarm->days);
+  // ESP_LOGD(TAG, "today %d", today);
+  // ESP_LOGD(TAG, "days %d", alarm->days);
 
   // TODO FIXME maybe this could be better.
   for (int i = 0; i < 8; i++) {
-    ESP_LOGD(TAG, "i %d", i);
+    // ESP_LOGD(TAG, "i %d", i);
     // Find which days after today matches the alarm days, or something.
     if (alarm->days & (SUNDAY >> ((today + i) % 7))) {
-      ESP_LOGD(TAG, "true 1");
+      // ESP_LOGD(TAG, "true 1");
       // In case if there is a match today originally, check if the schedule is
       // behind the current second.
-      if (alarm->secondMark > (i * 24 * 60 * 60)) {
-        ESP_LOGD(TAG, "true 2");
+      if (i == 0 && alarm->secondMark < today_sec) {
+        // ESP_LOGD(TAG, "true 2");
         continue;
       }
 
-      return alarm->secondMark + (i * 24 * 60 * 60);
+      return alarm->secondMark + (i * 24 * 60 * 60) - today_sec;
     }
 
-    ESP_LOGD(TAG, "false 1");
+    // ESP_LOGD(TAG, "false 1");
   }
 
   // UNREACHABLE
@@ -115,19 +154,21 @@ int Alarms::next_schedule(const struct Alarm *alarm, char today) {
 time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm) {
   Alarm *earliest = NULL;
   int earliest_second = INT_MAX;
+  int today_sec = (now->tm_hour * 60 * 60) + (now->tm_min * 60) + now->tm_sec;
+
   for (int idx = 0; idx < MAX_ALARMS; idx++) {
     Alarm test = alarms[idx];
-    if (test.name[0] == 0 || (test.days & 127) == 0x00) {
+    if (set(-1, &test)) {
       continue;
     }
 
     if (earliest == NULL) {
       earliest = &test;
-      earliest_second = next_schedule(earliest, now->tm_wday);
+      earliest_second = next_schedule(earliest, now->tm_wday, today_sec);
       continue;
     }
 
-    int test_second = next_schedule(&test, now->tm_wday);
+    int test_second = next_schedule(&test, now->tm_wday, today_sec);
 
     if (earliest_second > test_second) {
       earliest = &test;
@@ -142,12 +183,8 @@ time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm) {
     // printmem("earliest", earliest, sizeof(earliest));
     memcpy(alarm, earliest, sizeof(Alarm));
 
-    // TODO FIXME extract this into alarm_epoch.
     struct tm now_copy;
     memcpy(&now_copy, now, sizeof(tm));
-    now_copy.tm_hour = 0;
-    now_copy.tm_min = 0;
-    now_copy.tm_sec = 0;
 
     time_t epoch = mktime(&now_copy);
 
@@ -155,9 +192,10 @@ time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm) {
   }
 }
 
-Alarms::Alarms(void) {
+int Alarms::setup(void) {
+  // TODO DEBUG
   if (int err = load_from_fs(); err == -2) {
-    assert(Filesystem::format());
+    assert(LittleFS.format());
     esp_restart();
   } else if (err != 0) {
     abort();
@@ -185,8 +223,15 @@ Alarms::Alarms(void) {
   Alarm test = {};
   earliest_alarm(&now, &test);
 
+  int today_sec = (now.tm_hour * 60 * 60) + (now.tm_min * 60) + now.tm_sec;
+
   ESP_LOGD(TAG, "earliest: %s", test.name);
-  ESP_LOGD(TAG, "%s: %d", alarms[0].name, next_schedule(&alarms[0], 0));
-  ESP_LOGD(TAG, "%s: %d", alarms[1].name, next_schedule(&alarms[1], 0));
-  ESP_LOGD(TAG, "%s: %d", alarms[2].name, next_schedule(&alarms[2], 0));
+  ESP_LOGD(TAG, "%s: %d", alarms[0].name,
+           next_schedule(&alarms[0], 0, today_sec));
+  ESP_LOGD(TAG, "%s: %d", alarms[1].name,
+           next_schedule(&alarms[1], 0, today_sec));
+  ESP_LOGD(TAG, "%s: %d", alarms[2].name,
+           next_schedule(&alarms[2], 0, today_sec));
+
+  return 0;
 }

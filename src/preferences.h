@@ -9,7 +9,14 @@ struct WiFiConfig {
   char priority;
 };
 
-struct PreferencesFile {
+class DevicePreferences {
+public:
+  int setup(void);
+
+  int load_from_fs(void);
+  int save_into_fs(void);
+
+private:
   char version = PREFERENCES_VERSION;
   char web_password[32]; // For auth on the webapp.
   WiFiConfig wifi_configs[25];
@@ -17,13 +24,5 @@ struct PreferencesFile {
   int daylight_offset;
   char notify_url[64];
 };
-
-int setup_preferences(void);
-
-int preferences_load(void);
-int preferences_save(void);
-
-int preferences_set(const struct Preferences *src);
-int preferences_get(struct Preferences *dest);
 
 #endif
