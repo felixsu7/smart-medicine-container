@@ -13,11 +13,15 @@
 static const char *TAG = "alarm";
 
 int Alarms::load_from_fs(void) {
-  char data[sizeof(alarms) + 1];
+  char data[sizeof(list) + 1];
   memset(data, 0, sizeof(data));
 
   File file = LittleFS.open(ALARMS_PATH, FILE_READ);
-  assert(file && !file.isDirectory());
+  assert(!file.isDirectory());
+  if (!file) {
+    ESP_LOGW(TAG, "no saved data at %s, ignoring", ALARMS_PATH);
+    return -1;
+  }
 
   size_t res = file.readBytes(data, sizeof(data));
   if (res != sizeof(data)) {
@@ -31,25 +35,24 @@ int Alarms::load_from_fs(void) {
   // TODO DEBUG
   char dump[256 * 3 + 1];
   int dump_res = hexdump(dump, data, sizeof(data));
-  ESP_LOGD(TAG, "first %d bytes dump of %s: %s", res, ALARMS_PATH, dump);
+  ESP_LOGD(TAG, "first %d bytes dump of %s: %s", 256, ALARMS_PATH, dump);
 
   if (version != ALARM_VERSION) {
     ESP_LOGE(TAG, "unsupported version: %02X", version);
-    return -1;
+    return -3;
   }
 
   return 0;
 }
 
 int Alarms::save_into_fs(void) {
-  // TODO FIXME BROKEN
   File file = LittleFS.open(ALARMS_PATH, FILE_WRITE);
 
   assert(file && !file.isDirectory());
   assert(file.write(version) == 1);
 
   for (int i = 0; i < MAX_ALARMS; i++) {
-    assert(file.write((uint8_t *)&alarms[i], sizeof(Alarm)) == sizeof(Alarm));
+    assert(file.write((uint8_t *)&list[i], sizeof(Alarm)) == sizeof(Alarm));
   }
 
   file.flush();
@@ -60,12 +63,13 @@ int Alarms::save_into_fs(void) {
 
 int Alarms::add(const struct Alarm *alarm) {
   // FIXME?
-  if (set(-1, alarm) == -3) {
+  int err = set(-1, alarm);
+  if (err == -3) {
     return -2;
   }
+
   for (int i = 0; i < MAX_ALARMS; i++) {
     if (get(i, NULL) == -2) {
-      set(i, alarm);
       return i;
     }
   }
@@ -74,6 +78,7 @@ int Alarms::add(const struct Alarm *alarm) {
 
 int Alarms::set(int idx, const struct Alarm *alarm) {
   // FIXME not returning -3 if the alarm invalid
+  //
   if (idx < -1 || idx >= MAX_ALARMS) {
     return -1;
   }
@@ -83,11 +88,11 @@ int Alarms::set(int idx, const struct Alarm *alarm) {
   }
 
   if (alarm == NULL) {
-    memset(&alarms[idx], 0, sizeof(alarms[0]));
+    memset(&list[idx], 0, sizeof(list[0]));
     return 0;
   }
 
-  if (alarm->name[0] == 0x00 || (alarms->days & 127) == 0x00) {
+  if (alarm->name[0] == 0x00 || (alarm->days & 127) == 0x00) {
     return -3;
   }
 
@@ -95,7 +100,7 @@ int Alarms::set(int idx, const struct Alarm *alarm) {
     return 0;
   }
 
-  memcpy(&alarms[idx], alarm, sizeof(Alarm));
+  memcpy(&list[idx], alarm, sizeof(Alarm));
   return 0;
 }
 
@@ -104,7 +109,7 @@ int Alarms::get(int idx, struct Alarm *alarm) {
     return -1;
   }
 
-  Alarm a = alarms[idx];
+  Alarm a = list[idx];
   if (set(-1, &a) == -3) {
     return -2;
   }
@@ -157,7 +162,7 @@ time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm) {
   int today_sec = (now->tm_hour * 60 * 60) + (now->tm_min * 60) + now->tm_sec;
 
   for (int idx = 0; idx < MAX_ALARMS; idx++) {
-    Alarm test = alarms[idx];
+    Alarm test = list[idx];
     if (set(-1, &test)) {
       continue;
     }
@@ -197,41 +202,38 @@ int Alarms::setup(void) {
   if (int err = load_from_fs(); err == -2) {
     assert(LittleFS.format());
     esp_restart();
-  } else if (err != 0) {
-    abort();
+  } else if (err < -2) {
+    ESP_LOGE(TAG, "err is %d", err);
+    assert(false);
   };
-  // };
+
+  // strcpy(list[0].name, "first");
+  // list[0].days |= SUNDAY;
+  // list[0].secondMark = 5;
   //
-
-  strcpy(alarms[0].name, "first");
-  alarms[0].days |= SUNDAY;
-  alarms[0].secondMark = 5;
-
-  strcpy(alarms[1].name, "second");
-  alarms[1].days |= MONDAY;
-  alarms[1].secondMark = 3;
-
-  strcpy(alarms[2].name, "third");
-  alarms[2].days |= MONDAY;
-
-  struct tm now;
-  now.tm_sec = 0;
-  now.tm_min = 0;
-  now.tm_hour = 0;
-  now.tm_wday = 0;
-
-  Alarm test = {};
-  earliest_alarm(&now, &test);
-
-  int today_sec = (now.tm_hour * 60 * 60) + (now.tm_min * 60) + now.tm_sec;
-
-  ESP_LOGD(TAG, "earliest: %s", test.name);
-  ESP_LOGD(TAG, "%s: %d", alarms[0].name,
-           next_schedule(&alarms[0], 0, today_sec));
-  ESP_LOGD(TAG, "%s: %d", alarms[1].name,
-           next_schedule(&alarms[1], 0, today_sec));
-  ESP_LOGD(TAG, "%s: %d", alarms[2].name,
-           next_schedule(&alarms[2], 0, today_sec));
-
+  // strcpy(list[1].name, "second");
+  // list[1].days |= MONDAY;
+  // list[1].secondMark = 3;
+  //
+  // strcpy(list[2].name, "third");
+  // list[2].days |= MONDAY;
+  //
+  // struct tm now;
+  // now.tm_sec = 0;
+  // now.tm_min = 0;
+  // now.tm_hour = 0;
+  // now.tm_wday = 0;
+  //
+  // Alarm test = {};
+  // earliest_alarm(&now, &test);
+  //
+  // int today_sec = (now.tm_hour * 60 * 60) + (now.tm_min * 60) + now.tm_sec;
+  //
+  // ESP_LOGD(TAG, "earliest: %s", test.name);
+  // ESP_LOGD(TAG, "%s: %d", list[0].name, next_schedule(&list[0], 0,
+  // today_sec)); ESP_LOGD(TAG, "%s: %d", list[1].name, next_schedule(&list[1],
+  // 0, today_sec)); ESP_LOGD(TAG, "%s: %d", list[2].name,
+  // next_schedule(&list[2], 0, today_sec));
+  //
   return 0;
 }

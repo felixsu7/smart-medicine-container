@@ -83,7 +83,7 @@ public:
 
 private:
   char version = ALARM_VERSION;
-  Alarm alarms[MAX_ALARMS];
+  Alarm list[MAX_ALARMS];
 };
 
 #endif

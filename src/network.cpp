@@ -104,7 +104,10 @@ int Webserver::setup(Alarms *alarms) {
           alarm.secondMark = req->getParam("second")->value().toInt();
         }
 
+        ESP_LOGD(TAG, "name: %s, days: %d", alarm.name, alarm.days);
         int idx = alarms->add(&alarm);
+
+        ESP_LOGD(TAG, "idx %d", idx);
 
         if (idx == -2) {
           return res->send(400);
