@@ -3,6 +3,8 @@
 
 static const bool DEBUG = true;
 
+static const char *DEFAULT_HOSTNAME = "smartmedicinecontainer";
+
 static const char *DEFAULT_WIFI_SSID = "";
 static const char *DEFAULT_WIFI_PASS = "";
 

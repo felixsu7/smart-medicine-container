@@ -61,6 +61,105 @@ int Alarms::save_into_fs(void) {
   return 0;
 }
 
+void Alarms::loop(void) {
+  if (earliest_idx == -1) {
+    return;
+  }
+
+  if (time(NULL) > when_ring) {
+    ESP_LOGD(TAG, "%ld, %ld", time(NULL), when_ring);
+    ring(earliest_idx);
+  }
+}
+
+int Alarms::ring(int idx) {
+  if (ringing_idx != -1) {
+    // There is another alarm ringing.
+    return -1;
+  }
+
+  ringing_idx = idx;
+
+  return 0;
+}
+
+int Alarms::attend(time_t when, char flags) {
+  if (ringing_flags & 1) {
+    ringing_flags = !ringing_flags;
+    ringing_flags |= 3;
+    ringing_flags = !ringing_flags;
+    earliest_idx = -1;
+    ringing_idx = -1;
+  } else {
+    if (earliest_idx == -1) {
+      return -1;
+    }
+
+    assert(attend_idx(earliest_idx, when, flags) == 0);
+  }
+  // TODO
+  struct tm now;
+  gmtime_r(&when, &now);
+
+  refresh(&now);
+
+  return 0;
+}
+
+int Alarms::attend_idx(int idx, time_t when, char flags) {
+  if (idx < 0 || idx >= MAX_ALARMS) {
+    return -1;
+  }
+
+  list[idx].lastReminded = when;
+  AlarmLog log;
+  log.when = when;
+  log.flags = 0x00;
+
+  int err = append_log(idx, &log);
+  ESP_LOGD(TAG, "append_log err is %d", err);
+  assert(err >= 0);
+
+  return 0;
+}
+
+int Alarms::is_ringing(void) {
+  if (ringing_idx >= 0) {
+    return ringing_idx;
+  }
+  return -1;
+}
+
+int Alarms::refresh(const struct tm *now) {
+  if (ringing_flags & 2) {
+    return 1;
+  }
+
+  int idx;
+  time_t when = earliest_alarm(now, NULL, &idx);
+  ESP_LOGD(TAG, "when: %ld", when);
+  if (when < 0) {
+    return -1;
+  }
+
+  earliest_idx = idx;
+  when_ring = when;
+
+  return 0;
+}
+
+time_t Alarms::ring_in(void) { return when_ring; }
+
+int Alarms::one_off_ring(time_t when) {
+  if (ringing_idx != -1) {
+    return -1;
+  }
+  earliest_idx = 0;
+  when_ring = when;
+  ringing_flags = 3;
+  return 0;
+}
+
 int Alarms::add(const struct Alarm *alarm) {
   // FIXME?
   int err = set(-1, alarm);
@@ -121,6 +220,34 @@ int Alarms::get(int idx, struct Alarm *alarm) {
   return 0;
 }
 
+int Alarms::append_log(int idx, const struct AlarmLog *log) {
+  if (idx < 0 || idx >= MAX_ALARMS) {
+    return -1;
+  }
+
+  time_t oldest_when = 0;
+  int oldest_idx;
+
+  // TODO amount of logs (5) is currently hardcoded.
+  for (int i = 0; i < 5; i++) {
+    if (list[idx].logs[i].when == 0) {
+      memcpy(&list[idx].logs[i], log, sizeof(AlarmLog));
+      return 0;
+    }
+
+    ESP_LOGD(TAG, "idx %d when %ld", i, list[idx].logs[i].when);
+
+    if (oldest_when < list[idx].logs[i].when) {
+      oldest_when = list[idx].logs[i].when;
+      oldest_idx = i;
+    }
+  }
+
+  memcpy(&list[idx].logs[oldest_idx], log, sizeof(AlarmLog));
+
+  return 1;
+}
+
 int Alarms::next_schedule(const struct Alarm *alarm, char today,
                           int today_sec) {
   if (today > 7) {
@@ -156,13 +283,19 @@ int Alarms::next_schedule(const struct Alarm *alarm, char today,
   assert(false);
 }
 
-time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm) {
+time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm,
+                              int *idx_ptr) {
+  if (now == NULL) {
+    return -2;
+  }
+
   Alarm *earliest = NULL;
   int earliest_second = INT_MAX;
+  int earliest_idx = -1;
   int today_sec = (now->tm_hour * 60 * 60) + (now->tm_min * 60) + now->tm_sec;
 
-  for (int idx = 0; idx < MAX_ALARMS; idx++) {
-    Alarm test = list[idx];
+  for (int i = 0; i < MAX_ALARMS; i++) {
+    Alarm test = list[i];
     if (set(-1, &test)) {
       continue;
     }
@@ -170,6 +303,7 @@ time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm) {
     if (earliest == NULL) {
       earliest = &test;
       earliest_second = next_schedule(earliest, now->tm_wday, today_sec);
+      earliest_idx = i;
       continue;
     }
 
@@ -178,6 +312,7 @@ time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm) {
     if (earliest_second > test_second) {
       earliest = &test;
       earliest_second = test_second;
+      earliest_idx = i;
     }
   }
 
@@ -186,7 +321,13 @@ time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm) {
   } else {
     // printmem("dest_alarm", dest_alarm, sizeof(dest_alarm));
     // printmem("earliest", earliest, sizeof(earliest));
-    memcpy(alarm, earliest, sizeof(Alarm));
+    if (alarm != NULL) {
+      memcpy(alarm, earliest, sizeof(Alarm));
+    }
+
+    if (idx_ptr != NULL) {
+      *idx_ptr = earliest_idx;
+    }
 
     struct tm now_copy;
     memcpy(&now_copy, now, sizeof(tm));

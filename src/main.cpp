@@ -57,6 +57,22 @@ int counter;
 
 void loop() {
   wifi.reconnect_loop();
+  alarms.loop();
+
+  if (alarms.is_ringing() > -1) {
+    digitalWrite(BUZZER_PIN, HIGH);
+  } else {
+    digitalWrite(BUZZER_PIN, LOW);
+  }
+
+  if (digitalRead(SEC_BUTTON_PIN) == HIGH) {
+    if (alarms.is_ringing() == -1) {
+      ESP_LOGI(TAG, "no currently ringing alarm");
+      delay(500);
+    } else {
+      alarms.attend(time(NULL), 0x00);
+    }
+  }
 
   if (digitalRead(PRI_BUTTON_PIN) == HIGH) {
     if (notifyCooldown + 5 * 1000 < millis()) {

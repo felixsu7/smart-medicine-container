@@ -6,6 +6,7 @@
 #include "clock.h"
 #include "utils.h"
 #include <./network.h>
+#include <ESPmDNS.h>
 #include <WiFi.h>
 #include <string.h>
 
@@ -14,6 +15,9 @@ static const char *TAG = "web";
 int Wifi::setup(void) {
   const char *wifi_ssid = DEFAULT_WIFI_SSID;
   const char *wifi_pass = DEFAULT_WIFI_PASS;
+
+  WiFi.setHostname(DEFAULT_HOSTNAME);
+  WiFi.softAPsetHostname(DEFAULT_HOSTNAME);
 
   ESP_LOGD(TAG, "connecting to %s with pass %s", wifi_ssid, wifi_pass);
   WiFi.begin(wifi_ssid, wifi_pass);
@@ -42,6 +46,10 @@ int Wifi::reconnect_loop(void) {
 }
 
 int Webserver::setup(Alarms *alarms) {
+  // TODO
+  assert(MDNS.begin(DEFAULT_HOSTNAME));
+  assert(MDNS.addService("http", "tcp", 80));
+
   server.on("/", HTTP_GET, [](PsychicRequest *req, PsychicResponse *res) {
     return res->send("Hello!");
   });
@@ -125,15 +133,17 @@ int Webserver::setup(Alarms *alarms) {
   server.on(
       "/alarm", HTTP_DELETE, [=](PsychicRequest *req, PsychicResponse *res) {
         // TODO FIXME what?
-        if (!req->hasParam("idx")) {
+        if (!req->hasParam("idx", false)) {
           ESP_LOGW(TAG, "no idx param");
           return res->send(400);
         }
 
-        int err = alarms->set(req->getParam("idx")->value().toInt(), NULL);
+        int err =
+            alarms->set(req->getParam("idx", false)->value().toInt(), NULL);
 
         ESP_LOGW(TAG, "err is %d", err);
-        ESP_LOGW(TAG, "idx is %d", req->getParam("idx")->value().toInt());
+        ESP_LOGW(TAG, "idx is %d",
+                 req->getParam("idx", false)->value().toInt());
 
         if (err != 0) {
           return res->send(400);
@@ -148,14 +158,15 @@ int Webserver::setup(Alarms *alarms) {
             [=](PsychicRequest *req, PsychicResponse *res) {
               struct tm now;
               Alarm alarm;
+              int idx;
 
               Clock::get(&now);
-              time_t when = alarms->earliest_alarm(&now, &alarm);
+              time_t when = alarms->earliest_alarm(&now, &alarm, &idx);
 
               char reply[50 + 10 + 1];
               memset(reply, 0, sizeof(reply));
 
-              sprintf(reply, "%s %ld", alarm.name, when);
+              sprintf(reply, "%d: %s %ld", idx, alarm.name, when);
 
               return res->send(reply);
             });
@@ -193,6 +204,36 @@ int Webserver::setup(Alarms *alarms) {
 
         return res->finishChunking();
       });
+
+  server.on("/oneofftest", HTTP_POST,
+            [=](PsychicRequest *req, PsychicResponse *res) {
+              if (!req->hasParam("when")) {
+                return res->send(400);
+              }
+              time_t when = req->getParam("when")->value().toDouble();
+              if (when <= 0) {
+                return res->send(400);
+              }
+
+              time_t when_actually = time(NULL) + when;
+
+              ESP_LOGD(TAG, "when: %ld", when_actually);
+
+              if (alarms->one_off_ring(when_actually) != 0) {
+                return res->send(500);
+              }
+
+              return res->send(200);
+            });
+
+  server.on("/ringinfo", HTTP_GET,
+            [=](PsychicRequest *req, PsychicResponse *res) {
+              char reply[20];
+              time_t when_ring = alarms->ring_in();
+
+              sprintf(reply, "%ld", when_ring - time(NULL));
+              return res->send(reply);
+            });
 
   // TODO FIXME WARNING
   server.on("/clearalldata", HTTP_DELETE,
