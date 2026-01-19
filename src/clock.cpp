@@ -1,9 +1,9 @@
 #include "./clock.h"
+#include <uRTCLib.h>
 #include "./config.h"
 #include "WiFi.h"
-#include <uRTCLib.h>
 
-static const char *TAG = "clock";
+static const char* TAG = "clock";
 
 int Clock::sync_ntp(void) {
   int gmt_offset = DEFAULT_GMT_OFFSET_SECS;
@@ -96,7 +96,7 @@ int Clock::setup(void) {
   return 0;
 }
 
-int Clock::get(struct tm *dest_tm) {
+int Clock::get(struct tm* dest_tm) {
   for (int i = 5; i > 0; i--) {
     time_t now = time(NULL);
     gmtime_r(&now, dest_tm);

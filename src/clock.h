@@ -1,11 +1,11 @@
 #ifndef CLOCK_H
 #define CLOCK_H
 
-#include <ctime>
 #include <uRTCLib.h>
+#include <ctime>
 
 class Clock {
-public:
+ public:
   int setup(void);
 
   // Fetches the updated time from a set of NTP servers, and sets the system's
@@ -13,9 +13,9 @@ public:
   static int sync_ntp(void);
 
   // Returns time in GMT+0, also checks for correctness.
-  static int get(struct tm *now);
+  static int get(struct tm* now);
 
-private:
+ private:
   uRTCLib rtc;
 };
 #endif

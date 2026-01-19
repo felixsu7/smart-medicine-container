@@ -5,7 +5,7 @@
 #include "cstring"
 #include "utils.h"
 
-static const char *TAG = "preferences";
+static const char* TAG = "preferences";
 
 int DevicePreferences::setup(void) {
   // TODO DEBUG
@@ -21,29 +21,29 @@ int DevicePreferences::setup(void) {
 }
 
 int DevicePreferences::load_from_fs(void) {
-  global_mutex.lock();
+  fs_mutex.lock();
   File file = LittleFS.open(PREFERENCES_PATH, FILE_READ);
   assert(!file.isDirectory());
   if (!file) {
     // it needs to be closed because it would collide with the alarm saving
     // mechanism, applies for anything FS.
     file.close();
-    global_mutex.unlock();
+    fs_mutex.unlock();
     ESP_LOGW(TAG, "no saved data at %s, ignoring", PREFERENCES_PATH);
     return -1;
   }
 
-  size_t res = file.readBytes((char *)this, sizeof(DevicePreferences));
+  size_t res = file.readBytes((char*)this, sizeof(DevicePreferences));
   if (res != sizeof(DevicePreferences)) {
     file.close();
-    global_mutex.unlock();
+    fs_mutex.unlock();
     ESP_LOGE(TAG, "reading from %s, res %d, size %d", PREFERENCES_PATH, res,
              sizeof(DevicePreferences));
     return -2;
   };
 
   file.close();
-  global_mutex.unlock();
+  fs_mutex.unlock();
 
   // TODO DEBUG
   char dump[256 * 3 + 1];
@@ -77,12 +77,12 @@ int DevicePreferences::load_from_fs(void) {
 }
 
 int DevicePreferences::save_into_fs(void) {
-  global_mutex.lock();
+  fs_mutex.lock();
   File file = LittleFS.open(PREFERENCES_PATH, FILE_WRITE);
 
   assert(file && !file.isDirectory());
 
-  assert(file.write((const uint8_t *)this, sizeof(DevicePreferences)) ==
+  assert(file.write((const uint8_t*)this, sizeof(DevicePreferences)) ==
          sizeof(DevicePreferences));
 
   // TODO again, macros
@@ -102,7 +102,7 @@ int DevicePreferences::save_into_fs(void) {
   //        sizeof(notify_url));
 
   file.close();
-  global_mutex.unlock();
+  fs_mutex.unlock();
 
   return 0;
 }

@@ -14,4 +14,4 @@
 #define STEPPER_IN3 5
 #define STEPPER_IN4 17
 
-#endif // !PINS_H
+#endif  // !PINS_H

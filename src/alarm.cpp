@@ -1,39 +1,39 @@
 #include "./alarm.h"
-#include "LittleFS.h"
-#include "config.h"
-#include "esp32-hal-log.h"
-#include "time.h"
-#include "utils.h"
 #include <Esp.h>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include "LittleFS.h"
+#include "config.h"
+#include "esp32-hal-log.h"
+#include "time.h"
+#include "utils.h"
 
-static const char *TAG = "alarm";
+static const char* TAG = "alarm";
 
 int Alarms::load_from_fs(void) {
-  global_mutex.lock();
+  fs_mutex.lock();
   File file = LittleFS.open(ALARMS_PATH, FILE_READ);
   if (!file) {
     file.close();
-    global_mutex.unlock();
+    fs_mutex.unlock();
     ESP_LOGW(TAG, "no saved data at %s, ignoring", ALARMS_PATH);
     return -1;
   }
   assert(!file.isDirectory());
 
-  size_t res = file.readBytes((char *)this, sizeof(Alarms));
+  size_t res = file.readBytes((char*)this, sizeof(Alarms));
   if (res != sizeof(Alarms)) {
     file.close();
-    global_mutex.unlock();
+    fs_mutex.unlock();
     ESP_LOGE(TAG, "reading from %s, res %d, size %d", ALARMS_PATH, res,
              sizeof(Alarms));
     return -2;
   };
 
   file.close();
-  global_mutex.unlock();
+  fs_mutex.unlock();
 
   // TODO DEBUG
   char dump[256 * 3 + 1];
@@ -49,12 +49,12 @@ int Alarms::load_from_fs(void) {
 }
 
 int Alarms::save_into_fs(void) {
-  global_mutex.lock();
+  fs_mutex.lock();
   File file = LittleFS.open(ALARMS_PATH, FILE_WRITE);
 
   assert(file && !file.isDirectory());
 
-  assert(file.write((const uint8_t *)this, sizeof(Alarms)) == sizeof(Alarms));
+  assert(file.write((const uint8_t*)this, sizeof(Alarms)) == sizeof(Alarms));
   // assert(file.write(version) == 1);
   //
   // for (int i = 0; i < MAX_ALARMS; i++) {
@@ -64,7 +64,7 @@ int Alarms::save_into_fs(void) {
   // ESP_LOGD(TAG, "write err is %d", file.getWriteError());
 
   file.close();
-  global_mutex.unlock();
+  fs_mutex.unlock();
 
   return 0;
 }
@@ -142,7 +142,7 @@ int Alarms::is_ringing(void) {
   return -1;
 }
 
-int Alarms::refresh(const struct tm *now) {
+int Alarms::refresh(const struct tm* now) {
   if (ringing_flags & 2) {
     return 1;
   }
@@ -160,7 +160,7 @@ int Alarms::refresh(const struct tm *now) {
   return 0;
 }
 
-time_t Alarms::ring_in(int *idx_ptr) {
+time_t Alarms::ring_in(int* idx_ptr) {
   if (when_ring == 0) {
     if (idx_ptr != NULL) {
       *idx_ptr = -1;
@@ -190,7 +190,7 @@ int Alarms::one_off_ring(time_t when) {
   return 0;
 }
 
-int Alarms::add(const struct Alarm *alarm) {
+int Alarms::add(const struct Alarm* alarm) {
   // FIXME?
   int err = set(-1, alarm);
   ESP_LOGW(TAG, "err add is %d", err);
@@ -207,7 +207,7 @@ int Alarms::add(const struct Alarm *alarm) {
   return -1;
 };
 
-int Alarms::set(int idx, const struct Alarm *alarm) {
+int Alarms::set(int idx, const struct Alarm* alarm) {
   // FIXME not returning -3 if the alarm invalid
   //
   if (idx < -1 || idx >= MAX_ALARMS) {
@@ -235,7 +235,7 @@ int Alarms::set(int idx, const struct Alarm *alarm) {
   return 0;
 }
 
-int Alarms::get(int idx, struct Alarm *alarm) {
+int Alarms::get(int idx, struct Alarm* alarm) {
   if (idx < 0 || idx >= MAX_ALARMS) {
     return -1;
   }
@@ -252,7 +252,7 @@ int Alarms::get(int idx, struct Alarm *alarm) {
   return 0;
 }
 
-int Alarms::append_log(int idx, const struct AlarmLog *log) {
+int Alarms::append_log(int idx, const struct AlarmLog* log) {
   if (idx < 0 || idx >= MAX_ALARMS) {
     return -1;
   }
@@ -280,7 +280,7 @@ int Alarms::append_log(int idx, const struct AlarmLog *log) {
   return 1;
 }
 
-int Alarms::next_schedule(const struct Alarm *alarm, char today,
+int Alarms::next_schedule(const struct Alarm* alarm, char today,
                           int today_sec) {
   if (today > 7) {
     return -1;
@@ -315,13 +315,13 @@ int Alarms::next_schedule(const struct Alarm *alarm, char today,
   assert(false);
 }
 
-time_t Alarms::earliest_alarm(const struct tm *now, struct Alarm *alarm,
-                              int *idx_ptr) {
+time_t Alarms::earliest_alarm(const struct tm* now, struct Alarm* alarm,
+                              int* idx_ptr) {
   if (now == NULL) {
     return -2;
   }
 
-  Alarm *earliest = NULL;
+  Alarm* earliest = NULL;
   int earliest_second = INT_MAX;
   int earliest_idx = -1;
   int today_sec = (now->tm_hour * 60 * 60) + (now->tm_min * 60) + now->tm_sec;

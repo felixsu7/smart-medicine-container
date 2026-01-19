@@ -1,84 +1,33 @@
+#include <./webserver.h>
+#include <ESPmDNS.h>
+#include <string.h>
 #include "./config.h"
 #include "HTTPClient.h"
 #include "LittleFS.h"
 #include "PsychicHttpServer.h"
-#include "WiFiMulti.h"
 #include "alarm.h"
 #include "clock.h"
 #include "utils.h"
-#include <./network.h>
-#include <ESPmDNS.h>
-#include <string.h>
 
-static const char *TAG = "web";
+static const char* TAG = "webserver";
 
-static const bool FAST_WIFI_CONNECT = true;
-
-int Wifi::setup(void) {
-  WiFi.setHostname(DEFAULT_HOSTNAME);
-  WiFi.softAPsetHostname(DEFAULT_HOSTNAME);
-
-  if (FAST_WIFI_CONNECT) {
-    ESP_LOGD(TAG, "quickly connecting to %s with pass %s", DEFAULT_WIFI_SSID,
-             DEFAULT_WIFI_PASS);
-    WiFi.begin(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASS);
-
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(100);
-      if (WiFi.status() == WL_CONNECT_FAILED) {
-        ESP_LOGW(TAG, "connect failed, continuing...");
-        break;
-      }
-    }
-
-    return 0;
-  }
-
-  if (DEFAULT_WIFI_SSID != NULL) {
-    wifi_multi.addAP(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASS);
-  }
-
-  while (wifi_multi.run() != WL_CONNECTED) {
-    delay(100);
-
-    if (wifi_multi.run() == WL_CONNECT_FAILED) {
-      ESP_LOGW(TAG, "connect failed, continuing...");
-      break;
-    }
-  }
-
-  return 0;
-}
-
-int Wifi::reconnect_loop(void) {
-  static int lastReconnectCheck;
-  if (WiFi.status() != WL_CONNECTED &&
-      millis() > lastReconnectCheck + 1000 * 30) {
-    ESP_LOGW(TAG, "disconnected, reconnecting...");
-    WiFi.disconnect();
-    WiFi.reconnect();
-    lastReconnectCheck = millis();
-  }
-  return 0;
-}
-
-int Webserver::setup(Alarms *alarms) {
+int Webserver::setup(Alarms* alarms) {
   // TODO
   assert(MDNS.begin(DEFAULT_HOSTNAME));
   assert(MDNS.addService("http", "tcp", 80));
 
-  server.on("/", HTTP_GET, [](PsychicRequest *req, PsychicResponse *res) {
+  server.on("/", HTTP_GET, [](PsychicRequest* req, PsychicResponse* res) {
     return res->send("Hello!");
   });
 
   server.on("/test_notify", HTTP_POST,
-            [](PsychicRequest *req, PsychicResponse *res) {
+            [](PsychicRequest* req, PsychicResponse* res) {
               int code = test_notify(req->body().c_str());
               return res->send(code);
             });
 
   server.on(
-      "/alarm", HTTP_POST, [=](PsychicRequest *req, PsychicResponse *res) {
+      "/alarm", HTTP_POST, [=](PsychicRequest* req, PsychicResponse* res) {
         char reply[sizeof(Alarm) * 3 + 3 + 1];
         struct Alarm alarm;
         memset(reply, 0, sizeof(reply));
@@ -152,7 +101,7 @@ int Webserver::setup(Alarms *alarms) {
       });
 
   server.on(
-      "/alarm", HTTP_DELETE, [=](PsychicRequest *req, PsychicResponse *res) {
+      "/alarm", HTTP_DELETE, [=](PsychicRequest* req, PsychicResponse* res) {
         // TODO FIXME what?
         if (!req->hasParam("idx", false)) {
           ESP_LOGW(TAG, "no idx param");
@@ -176,7 +125,7 @@ int Webserver::setup(Alarms *alarms) {
       });
 
   server.on("/earliest_alarm", HTTP_GET,
-            [=](PsychicRequest *req, PsychicResponse *res) {
+            [=](PsychicRequest* req, PsychicResponse* res) {
               struct tm now;
               Alarm alarm;
               int idx;
@@ -193,7 +142,7 @@ int Webserver::setup(Alarms *alarms) {
             });
 
   server.on(
-      "/alarms", HTTP_GET, [=](PsychicRequest *req, PsychicResponse *res) {
+      "/alarms", HTTP_GET, [=](PsychicRequest* req, PsychicResponse* res) {
         struct tm now;
         Clock::get(&now);
 
@@ -215,7 +164,7 @@ int Webserver::setup(Alarms *alarms) {
                   alarm.name, alarm.days, alarm.secondMark,
                   alarms->next_schedule(&alarm, now.tm_wday, today_sec));
 
-          if (int err = res->sendChunk((uint8_t *)msg_part, strlen(msg_part));
+          if (int err = res->sendChunk((uint8_t*)msg_part, strlen(msg_part));
               err != 0) {
             ESP_LOGE(TAG, "sendChunk returned %d", err);
             res->send(500);
@@ -227,7 +176,7 @@ int Webserver::setup(Alarms *alarms) {
       });
 
   server.on("/oneofftest", HTTP_POST,
-            [=](PsychicRequest *req, PsychicResponse *res) {
+            [=](PsychicRequest* req, PsychicResponse* res) {
               if (!req->hasParam("when")) {
                 return res->send(400);
               }
@@ -248,7 +197,7 @@ int Webserver::setup(Alarms *alarms) {
             });
 
   server.on("/ringinfo", HTTP_GET,
-            [=](PsychicRequest *req, PsychicResponse *res) {
+            [=](PsychicRequest* req, PsychicResponse* res) {
               char reply[50];
               int idx;
               char name[51];
@@ -268,7 +217,7 @@ int Webserver::setup(Alarms *alarms) {
 
   // TODO FIXME WARNING
   server.on("/clearalldata", HTTP_DELETE,
-            [](PsychicRequest *req, PsychicResponse *res) {
+            [](PsychicRequest* req, PsychicResponse* res) {
               assert(LittleFS.format());
               res->send(200);
               esp_restart();
@@ -278,7 +227,7 @@ int Webserver::setup(Alarms *alarms) {
   return server.begin();
 }
 
-int Webserver::test_notify(const char *message) {
+int Webserver::test_notify(const char* message) {
   if (WiFi.status() != WL_CONNECTED) {
     ESP_LOGW(TAG, "not connected");
   }
