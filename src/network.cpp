@@ -2,34 +2,51 @@
 #include "HTTPClient.h"
 #include "LittleFS.h"
 #include "PsychicHttpServer.h"
+#include "WiFiMulti.h"
 #include "alarm.h"
 #include "clock.h"
 #include "utils.h"
 #include <./network.h>
 #include <ESPmDNS.h>
-#include <WiFi.h>
 #include <string.h>
 
 static const char *TAG = "web";
 
-int Wifi::setup(void) {
-  const char *wifi_ssid = DEFAULT_WIFI_SSID;
-  const char *wifi_pass = DEFAULT_WIFI_PASS;
+static const bool FAST_WIFI_CONNECT = true;
 
+int Wifi::setup(void) {
   WiFi.setHostname(DEFAULT_HOSTNAME);
   WiFi.softAPsetHostname(DEFAULT_HOSTNAME);
 
-  ESP_LOGD(TAG, "connecting to %s with pass %s", wifi_ssid, wifi_pass);
-  WiFi.begin(wifi_ssid, wifi_pass);
+  if (FAST_WIFI_CONNECT) {
+    ESP_LOGD(TAG, "quickly connecting to %s with pass %s", DEFAULT_WIFI_SSID,
+             DEFAULT_WIFI_PASS);
+    WiFi.begin(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASS);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(200);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(100);
+      if (WiFi.status() == WL_CONNECT_FAILED) {
+        ESP_LOGW(TAG, "connect failed, continuing...");
+        break;
+      }
+    }
 
-    if (WiFi.status() == WL_CONNECT_FAILED) {
+    return 0;
+  }
+
+  if (DEFAULT_WIFI_SSID != NULL) {
+    wifi_multi.addAP(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASS);
+  }
+
+  while (wifi_multi.run() != WL_CONNECTED) {
+    delay(100);
+
+    if (wifi_multi.run() == WL_CONNECT_FAILED) {
       ESP_LOGW(TAG, "connect failed, continuing...");
       break;
     }
   }
+
   return 0;
 }
 

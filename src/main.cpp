@@ -10,6 +10,7 @@
 
 static const char *TAG = "main";
 
+DevicePreferences preferences;
 Wifi wifi;
 Clock rtc;
 Alarms alarms;
@@ -35,9 +36,11 @@ void setup() {
   ESP_LOGI(TAG, "fs size: %ld/%ld\n", LittleFS.usedBytes(),
            LittleFS.totalBytes());
 
+  preferences.setup();
   wifi.setup();
   rtc.setup();
   alarms.setup();
+  assert(preferences.save_into_fs() == 0);
 
   if (WiFi.status() == WL_CONNECTED) {
     assert(webserver.setup(&alarms) == 0);

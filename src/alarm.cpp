@@ -13,55 +13,58 @@
 static const char *TAG = "alarm";
 
 int Alarms::load_from_fs(void) {
-  char data[sizeof(list) + 1];
-  memset(data, 0, sizeof(data));
-
+  global_mutex.lock();
   File file = LittleFS.open(ALARMS_PATH, FILE_READ);
-  assert(!file.isDirectory());
   if (!file) {
+    file.close();
+    global_mutex.unlock();
     ESP_LOGW(TAG, "no saved data at %s, ignoring", ALARMS_PATH);
     return -1;
   }
+  assert(!file.isDirectory());
 
-  size_t res = file.readBytes(data, sizeof(data));
-  if (res != sizeof(data)) {
+  size_t res = file.readBytes((char *)this, sizeof(Alarms));
+  if (res != sizeof(Alarms)) {
+    file.close();
+    global_mutex.unlock();
     ESP_LOGE(TAG, "reading from %s, res %d, size %d", ALARMS_PATH, res,
-             sizeof(data));
+             sizeof(Alarms));
     return -2;
   };
 
   file.close();
+  global_mutex.unlock();
 
   // TODO DEBUG
   char dump[256 * 3 + 1];
-  int dump_res = hexdump(dump, data, sizeof(data));
+  int dump_res = hexdump(dump, this, sizeof(Alarms));
   ESP_LOGD(TAG, "first %d bytes dump of %s: %s", 256, ALARMS_PATH, dump);
 
-  char data_version = data[0];
-
-  if (data_version != ALARM_VERSION) {
+  if (version != ALARM_VERSION) {
     ESP_LOGE(TAG, "unsupported version: %02X", version);
     return -3;
   }
-
-  // TODO
-  memcpy(list, data + 1, sizeof(list));
 
   return 0;
 }
 
 int Alarms::save_into_fs(void) {
+  global_mutex.lock();
   File file = LittleFS.open(ALARMS_PATH, FILE_WRITE);
 
   assert(file && !file.isDirectory());
-  assert(file.write(version) == 1);
 
-  for (int i = 0; i < MAX_ALARMS; i++) {
-    assert(file.write((uint8_t *)&list[i], sizeof(Alarm)) == sizeof(Alarm));
-  }
+  assert(file.write((const uint8_t *)this, sizeof(Alarms)) == sizeof(Alarms));
+  // assert(file.write(version) == 1);
+  //
+  // for (int i = 0; i < MAX_ALARMS; i++) {
+  //   assert(file.write((uint8_t *)&list[i], sizeof(Alarm)) == sizeof(Alarm));
+  // }
+  //
+  // ESP_LOGD(TAG, "write err is %d", file.getWriteError());
 
-  file.flush();
   file.close();
+  global_mutex.unlock();
 
   return 0;
 }
