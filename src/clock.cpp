@@ -65,8 +65,6 @@ int Clock::setup(void) {
 
     assert(rtc.refresh() == true);
 
-    assert(sync_ntp());
-
     rtc.lostPowerClear();
   } else {
     struct tm now;
