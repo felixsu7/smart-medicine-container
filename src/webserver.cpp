@@ -7,7 +7,6 @@
 #include "PsychicHttpServer.h"
 #include "alarm.h"
 #include "clock.h"
-#include "utils.h"
 
 static const char* TAG = "webserver";
 
@@ -28,118 +27,133 @@ int Webserver::setup(Alarms* alarms) {
 
   server.on(
       "/alarm", HTTP_POST, [=](PsychicRequest* req, PsychicResponse* res) {
-        char reply[sizeof(Alarm) * 3 + 3 + 1];
         struct Alarm alarm;
-        memset(reply, 0, sizeof(reply));
         memset(&alarm, 0, sizeof(Alarm));
 
         if (req->hasParam("name")) {
-          // strncat(reply, req->getParam("name")->value().c_str(),
-          // sizeof(alarm.name) - 1);
           strncpy(alarm.name, req->getParam("name")->value().c_str(),
                   sizeof(alarm.name) - 1);
-          // strncat(reply, " ", 1);
         }
+
         if (req->hasParam("description")) {
-          // strncat(reply, req->getParam("description")->value().c_str(),
-          // sizeof(alarm.description) - 1);
           strncpy(alarm.description,
                   req->getParam("description")->value().c_str(),
                   sizeof(alarm.description) - 1);
-          // strncat(reply, " ", 1);
         }
         if (req->hasParam("category")) {
-          // strncat(reply, req->getParam("category")->value().c_str(), 3);
           alarm.category = (char)req->getParam("category")->value().toInt();
-          // strncat(reply, " ", 1);
         }
         if (req->hasParam("flags")) {
-          // strncat(reply, req->getParam("flags")->value().c_str(), 3);
           alarm.flags = (char)req->getParam("flags")->value().toInt();
-          // strncat(reply, " ", 1);
         }
         if (req->hasParam("days")) {
-          // strncat(reply, req->getParam("days")->value().c_str(), 3);
           alarm.days = (char)req->getParam("days")->value().toInt();
-          // strncat(reply, " ", 1);
         }
         if (req->hasParam("icon")) {
-          // strncat(reply, req->getParam("icon")->value().c_str(), 3);
           alarm.icon = (char)req->getParam("icon")->value().toInt();
-          // strncat(reply, " ", 1);
         }
         if (req->hasParam("color")) {
-          // strncat(reply, req->getParam("color")->value().c_str(), 4);
           alarm.color = (short)req->getParam("color")->value().toInt();
-          // strncat(reply, " ", 1);
         }
         if (req->hasParam("second")) {
-          // strncat(reply, req->getParam("second")->value().c_str(), 5);
           alarm.secondMark = req->getParam("second")->value().toInt();
         }
 
-        ESP_LOGD(TAG, "name: %s, days: %d", alarm.name, alarm.days);
         int idx = alarms->add(&alarm);
-
-        ESP_LOGD(TAG, "idx %d", idx);
 
         if (idx == -2) {
           return res->send(400);
         }
 
-        alarms->save_into_fs();
-
         struct tm now;
         Clock::get(&now);
-        alarms->refresh(&now);
+        assert(alarms->refresh(&now));
 
-        hexdump(reply, &alarm, sizeof(Alarm));
+        alarms->save_into_fs();
 
-        sprintf(reply + strlen(reply), "%02d\n", idx);
+        char reply[5];
+        memset(reply, 0, sizeof(reply));
+        snprintf(reply, sizeof(reply), "%d", idx);
 
         return res->send(reply);
       });
 
-  server.on(
-      "/alarm", HTTP_DELETE, [=](PsychicRequest* req, PsychicResponse* res) {
-        // TODO FIXME what?
-        if (!req->hasParam("idx", false)) {
-          ESP_LOGW(TAG, "no idx param");
-          return res->send(400);
-        }
+  server.on("/alarm/", HTTP_DELETE,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              long idx = req->path().substring(7).toInt();
+              ESP_LOGD(TAG, "idx is %ld", idx);
+              if (idx <= 0 || idx >= MAX_ALARMS) {
+                return res->send(400);
+              }
+              idx--;
 
-        int err =
-            alarms->set(req->getParam("idx", false)->value().toInt(), NULL);
+              int err = alarms->set(idx, NULL);
+              ESP_LOGW(TAG, "err is %d", err);
+              if (err != 0) {
+                return res->send(400);
+              }
 
-        ESP_LOGW(TAG, "err is %d", err);
-        ESP_LOGW(TAG, "idx is %d",
-                 req->getParam("idx", false)->value().toInt());
+              struct tm now;
+              Clock::get(&now);
+              assert(alarms->refresh(&now) == 0);
 
-        if (err != 0) {
-          return res->send(400);
-        }
+              assert(alarms->save_into_fs() == 0);
 
-        assert(alarms->save_into_fs() == 0);
-
-        return res->send(200);
-      });
+              return res->send(200);
+            });
 
   server.on("/earliest_alarm", HTTP_GET,
             [=](PsychicRequest* req, PsychicResponse* res) {
               struct tm now;
+              Clock::get(&now);
+
               Alarm alarm;
               int idx;
-
-              Clock::get(&now);
               time_t when = alarms->earliest_alarm(&now, &alarm, &idx);
 
-              char reply[50 + 10 + 1];
+              char reply[210];
               memset(reply, 0, sizeof(reply));
 
-              sprintf(reply, "%d: %s %ld", idx, alarm.name, when);
+              snprintf(reply, sizeof(reply),
+                       "%d\n%s\n%s\n%d %d %d %d %d %d %ld\n%ld", idx,
+                       alarm.name, alarm.description, alarm.category,
+                       alarm.flags, alarm.days, alarm.icon, alarm.color,
+                       alarm.secondMark, alarm.lastReminded, when);
 
               return res->send(reply);
             });
+
+  server.on(
+      "/alarm/", HTTP_GET, [=](PsychicRequest* req, PsychicResponse* res) {
+        // TODO FIXME find a way to detect errors without checking if it is zero.
+        long idx = req->path().substring(7).toInt();
+        ESP_LOGD(TAG, "idx is %ld", idx);
+        if (idx <= 0 || idx >= MAX_ALARMS) {
+          return res->send(400);
+        }
+        idx--;
+
+        Alarm alarm;
+        if (alarms->get(idx, &alarm) != 0) {
+          return res->send(404);
+        }
+
+        char reply[210];
+        memset(reply, 0, sizeof(reply));
+        struct tm now;
+        Clock::get(&now);
+        long when = time(NULL) +
+                    alarms->next_schedule(&alarm, now.tm_wday,
+                                          (now.tm_hour * 60 * 60) +
+                                              (now.tm_min * 60) + now.tm_sec);
+
+        snprintf(reply, sizeof(reply), "%s\n%s\n%d %d %d %d %d %d %ld\n%ld",
+                 alarm.name, alarm.description, alarm.category, alarm.flags,
+                 alarm.days, alarm.icon, alarm.color, alarm.secondMark,
+                 alarm.lastReminded, when);
+
+        return res->send(reply);
+      });
 
   server.on(
       "/alarms", HTTP_GET, [=](PsychicRequest* req, PsychicResponse* res) {
@@ -152,19 +166,22 @@ int Webserver::setup(Alarms* alarms) {
             continue;
           };
 
-          // TODO FIXME this check shouldnt be necessary at all.
-          if (alarms->set(-1, &alarm)) {
-            continue;
-          }
+          char reply[210];
+          memset(reply, 0, sizeof(reply));
+          struct tm now;
+          Clock::get(&now);
+          long when = time(NULL) +
+                      alarms->next_schedule(&alarm, now.tm_wday,
+                                            (now.tm_hour * 60 * 60) +
+                                                (now.tm_min * 60) + now.tm_sec);
 
-          char msg_part[100];
-          int today_sec =
-              (now.tm_hour * 60 * 60) + (now.tm_min * 60) + now.tm_sec;
-          sprintf(msg_part, "%d: '%s' days:%02X sec:%d earliest_alarm:%d\n", i,
-                  alarm.name, alarm.days, alarm.secondMark,
-                  alarms->next_schedule(&alarm, now.tm_wday, today_sec));
+          snprintf(reply, sizeof(reply),
+                   "%d\n%s\n%s\n%d %d %d %d %d %d %ld\n%ld\n\n", i, alarm.name,
+                   alarm.description, alarm.category, alarm.flags, alarm.days,
+                   alarm.icon, alarm.color, alarm.secondMark,
+                   alarm.lastReminded, when);
 
-          if (int err = res->sendChunk((uint8_t*)msg_part, strlen(msg_part));
+          if (int err = res->sendChunk((uint8_t*)reply, strlen(reply));
               err != 0) {
             ESP_LOGE(TAG, "sendChunk returned %d", err);
             res->send(500);
@@ -175,45 +192,45 @@ int Webserver::setup(Alarms* alarms) {
         return res->finishChunking();
       });
 
-  server.on("/oneofftest", HTTP_POST,
+  server.on("/oneoff", HTTP_POST,
             [=](PsychicRequest* req, PsychicResponse* res) {
-              if (!req->hasParam("when")) {
-                return res->send(400);
-              }
-              time_t when = req->getParam("when")->value().toDouble();
-              if (when <= 0) {
+              if (!req->hasParam("second")) {
                 return res->send(400);
               }
 
-              time_t when_actually = time(NULL) + when;
+              time_t sec = req->getParam("second")->value().toInt();
+              if (sec == 0) {
+                return res->send(400);
+              }
 
-              ESP_LOGD(TAG, "when: %ld", when_actually);
+              time_t when = time(NULL) + sec;
 
-              if (alarms->one_off_ring(when_actually) != 0) {
+              ESP_LOGD(TAG, "when: %ld", when);
+
+              if (alarms->one_off_ring(when) != 0) {
                 return res->send(500);
               }
 
               return res->send(200);
             });
 
-  server.on("/ringinfo", HTTP_GET,
-            [=](PsychicRequest* req, PsychicResponse* res) {
-              char reply[50];
-              int idx;
-              char name[51];
+  server.on("/ring", HTTP_GET, [=](PsychicRequest* req, PsychicResponse* res) {
+    int idx;
+    time_t when_ring = alarms->ring_in(&idx);
+    char name[51];
 
-              time_t when_ring = alarms->ring_in(&idx);
-              if (idx >= 0) {
-                Alarm alarm;
-                alarms->get(idx, &alarm);
-                strcpy(name, alarm.name);
-              } else {
-                strcpy(name, "One-off alarm");
-              }
+    if (idx >= 0) {
+      Alarm alarm;
+      alarms->get(idx, &alarm);
+      strcpy(name, alarm.name);
+    } else {
+      strcpy(name, "One-off alarm");
+    }
 
-              sprintf(reply, "%s rings in %lds", name, when_ring - time(NULL));
-              return res->send(reply);
-            });
+    char reply[75];
+    sprintf(reply, "%s rings in %lds", name, when_ring - time(NULL));
+    return res->send(reply);
+  });
 
   // TODO FIXME WARNING
   server.on("/clearalldata", HTTP_DELETE,
