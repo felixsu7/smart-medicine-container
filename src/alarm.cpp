@@ -37,10 +37,15 @@ int Alarms::load_from_fs(void) {
   int dump_res = hexdump(dump, data, sizeof(data));
   ESP_LOGD(TAG, "first %d bytes dump of %s: %s", 256, ALARMS_PATH, dump);
 
-  if (version != ALARM_VERSION) {
+  char data_version = data[0];
+
+  if (data_version != ALARM_VERSION) {
     ESP_LOGE(TAG, "unsupported version: %02X", version);
     return -3;
   }
+
+  // TODO
+  memcpy(list, data + 1, sizeof(list));
 
   return 0;
 }
@@ -67,7 +72,7 @@ void Alarms::loop(void) {
   }
 
   if (time(NULL) > when_ring) {
-    ESP_LOGD(TAG, "%ld, %ld", time(NULL), when_ring);
+    // ESP_LOGD(TAG, "%ld, %ld", time(NULL), when_ring);
     ring(earliest_idx);
   }
 }
@@ -120,6 +125,10 @@ int Alarms::attend_idx(int idx, time_t when, char flags) {
   ESP_LOGD(TAG, "append_log err is %d", err);
   assert(err >= 0);
 
+  earliest_idx = -1;
+  ringing_idx = -1;
+  when_ring = -1;
+
   return 0;
 }
 
@@ -148,7 +157,25 @@ int Alarms::refresh(const struct tm *now) {
   return 0;
 }
 
-time_t Alarms::ring_in(void) { return when_ring; }
+time_t Alarms::ring_in(int *idx_ptr) {
+  if (when_ring == 0) {
+    if (idx_ptr != NULL) {
+      *idx_ptr = -1;
+    }
+    return 0;
+  }
+
+  if (idx_ptr != NULL) {
+    if (earliest_idx == -1) {
+      // One-off
+      *idx_ptr = -2;
+      return when_ring;
+    }
+    *idx_ptr = earliest_idx;
+  }
+
+  return when_ring;
+}
 
 int Alarms::one_off_ring(time_t when) {
   if (ringing_idx != -1) {
@@ -163,12 +190,14 @@ int Alarms::one_off_ring(time_t when) {
 int Alarms::add(const struct Alarm *alarm) {
   // FIXME?
   int err = set(-1, alarm);
+  ESP_LOGW(TAG, "err add is %d", err);
   if (err == -3) {
     return -2;
   }
 
   for (int i = 0; i < MAX_ALARMS; i++) {
     if (get(i, NULL) == -2) {
+      set(i, alarm);
       return i;
     }
   }

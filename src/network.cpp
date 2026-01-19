@@ -123,6 +123,10 @@ int Webserver::setup(Alarms *alarms) {
 
         alarms->save_into_fs();
 
+        struct tm now;
+        Clock::get(&now);
+        alarms->refresh(&now);
+
         hexdump(reply, &alarm, sizeof(Alarm));
 
         sprintf(reply + strlen(reply), "%02d\n", idx);
@@ -228,10 +232,20 @@ int Webserver::setup(Alarms *alarms) {
 
   server.on("/ringinfo", HTTP_GET,
             [=](PsychicRequest *req, PsychicResponse *res) {
-              char reply[20];
-              time_t when_ring = alarms->ring_in();
+              char reply[50];
+              int idx;
+              char name[51];
 
-              sprintf(reply, "%ld", when_ring - time(NULL));
+              time_t when_ring = alarms->ring_in(&idx);
+              if (idx >= 0) {
+                Alarm alarm;
+                alarms->get(idx, &alarm);
+                strcpy(name, alarm.name);
+              } else {
+                strcpy(name, "One-off alarm");
+              }
+
+              sprintf(reply, "%s rings in %lds", name, when_ring - time(NULL));
               return res->send(reply);
             });
 

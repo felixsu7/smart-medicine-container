@@ -43,6 +43,10 @@ void setup() {
     assert(webserver.setup(&alarms) == 0);
   }
 
+  struct tm now;
+  Clock::get(&now);
+  alarms.refresh(&now);
+
   ESP_LOGI(TAG, "alarm size: %d", sizeof(Alarm));
   ESP_LOGI(TAG, "alarm file size: %d", sizeof(Alarms));
   ESP_LOGI(TAG, "alarm log file size: %d", sizeof(AlarmLog));
@@ -54,10 +58,21 @@ void setup() {
 
 long notifyCooldown;
 int counter;
+time_t last_ring_reminded;
+time_t ringing_reminded;
 
 void loop() {
   wifi.reconnect_loop();
   alarms.loop();
+
+  if (last_ring_reminded <= time(NULL)) {
+    int idx;
+    time_t when_ring = alarms.ring_in(&idx);
+    if (when_ring > 0) {
+      ESP_LOGD(TAG, "idx %d ringing in %lds", idx, when_ring - time(NULL));
+      last_ring_reminded = time(NULL) + 1;
+    }
+  }
 
   if (alarms.is_ringing() > -1) {
     digitalWrite(BUZZER_PIN, HIGH);
@@ -66,11 +81,13 @@ void loop() {
   }
 
   if (digitalRead(SEC_BUTTON_PIN) == HIGH) {
-    if (alarms.is_ringing() == -1) {
-      ESP_LOGI(TAG, "no currently ringing alarm");
-      delay(500);
-    } else {
-      alarms.attend(time(NULL), 0x00);
+    if (ringing_reminded <= time(NULL)) {
+      if (alarms.is_ringing() == -1) {
+        ESP_LOGI(TAG, "no currently ringing alarm");
+        ringing_reminded = time(NULL) + 1;
+      } else {
+        alarms.attend(time(NULL), 0x00);
+      }
     }
   }
 

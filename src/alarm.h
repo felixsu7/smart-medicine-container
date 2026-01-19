@@ -23,8 +23,8 @@ struct AlarmLog {
 };
 
 struct Alarm {
-  char name[50];
-  char description[100];
+  char name[51];
+  char description[101];
   char category;
   char flags;
   char days; // See the Days Enum.
@@ -66,7 +66,10 @@ public:
   // disables refreshes.
   int one_off_ring(time_t when);
 
-  time_t ring_in(void);
+  // Returns when an alarm would ring, the index of said alarm would be set on
+  // the idx_ptr, can be NULL. If set to -2,  there is no associated alarm
+  // (one-off). If set to -1, no alarm. Other negative values are errors.
+  time_t ring_in(int *idx_ptr);
 
   // Copies the alarm from storage with specified index to alarm. Returns
   // Returns -1 if the index is out of bounds. Returns -2 if the index is
