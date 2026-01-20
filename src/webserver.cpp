@@ -7,6 +7,7 @@
 #include "PsychicHttpServer.h"
 #include "alarm.h"
 #include "clock.h"
+#include "embed.h"
 #include "motor.h"
 
 static const char* TAG = "webserver";
@@ -15,10 +16,6 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
   // TODO
   assert(MDNS.begin(DEFAULT_HOSTNAME));
   assert(MDNS.addService("http", "tcp", 80));
-
-  server.on("/", HTTP_GET, [](PsychicRequest* req, PsychicResponse* res) {
-    return res->send("Hello!");
-  });
 
   server.on("/test_notify", HTTP_POST,
             [](PsychicRequest* req, PsychicResponse* res) {
@@ -240,7 +237,7 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
 
     int compartment = req->getParam("compartment")->value().toInt();
     // 0 is the error value of toInt(), sad
-    if (compartment <= 0 || compartment > COMPARTMENTS + 1) {
+    if (compartment <= 0 || compartment > COMPARTMENTS) {
       return res->send(400);
     }
     compartment--;
@@ -248,6 +245,19 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
 
     return res->send(200);
   });
+
+  // TODO caching and extract these into functions, optionally gzip compression
+  server.on("/", HTTP_GET, [=](PsychicRequest* req, PsychicResponse* res) {
+    return res->send(200, "text/html", EMBED_INDEX_HTML_DATA);
+  });
+  server.on("/htmx.js", HTTP_GET,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              return res->send(200, "text/javascript", EMBED_HTMX_JS_DATA);
+            });
+  server.on("/pico.css", HTTP_GET,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              return res->send(200, "text/css", EMBED_PICO_CSS_DATA);
+            });
 
   // TODO FIXME WARNING
   server.on("/clearalldata", HTTP_DELETE,
