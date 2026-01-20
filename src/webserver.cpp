@@ -7,10 +7,11 @@
 #include "PsychicHttpServer.h"
 #include "alarm.h"
 #include "clock.h"
+#include "motor.h"
 
 static const char* TAG = "webserver";
 
-int Webserver::setup(Alarms* alarms) {
+int Webserver::setup(Alarms* alarms, Motor* motor) {
   // TODO
   assert(MDNS.begin(DEFAULT_HOSTNAME));
   assert(MDNS.addService("http", "tcp", 80));
@@ -230,6 +231,22 @@ int Webserver::setup(Alarms* alarms) {
     char reply[75];
     sprintf(reply, "%s rings in %lds", name, when_ring - time(NULL));
     return res->send(reply);
+  });
+
+  server.on("/spin", HTTP_POST, [=](PsychicRequest* req, PsychicResponse* res) {
+    if (!req->hasParam("compartment")) {
+      return res->send(400);
+    }
+
+    int compartment = req->getParam("compartment")->value().toInt();
+    // 0 is the error value of toInt(), sad
+    if (compartment <= 0 || compartment > COMPARTMENTS + 1) {
+      return res->send(400);
+    }
+    compartment--;
+    assert(motor->spin_to(compartment) == 0);
+
+    return res->send(200);
   });
 
   // TODO FIXME WARNING

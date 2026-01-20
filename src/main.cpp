@@ -8,6 +8,7 @@
 #include "WiFi.h"
 #include "clock.h"
 #include "esp32-hal-gpio.h"
+#include "motor.h"
 #include "utils.h"
 
 static const char* TAG = "main";
@@ -17,6 +18,7 @@ Wifi wifi;
 Clock rtc;
 Alarms alarms;
 Webserver webserver;
+Motor motor;
 
 void setup() {
   Serial.begin(115200);
@@ -41,10 +43,11 @@ void setup() {
   wifi.setup();
   rtc.setup();
   alarms.setup();
+  motor.setup();
   // assert(preferences.save_into_fs() == 0);
 
   if (WiFi.status() == WL_CONNECTED) {
-    assert(webserver.setup(&alarms) == 0);
+    assert(webserver.setup(&alarms, &motor) == 0);
   }
 
   struct tm now;
@@ -63,6 +66,7 @@ void setup() {
 void loop() {
   wifi.reconnect_loop();
   alarms.loop();
+  motor.loop();
 
   static long ring_forecast_tk;
   if (bounce(&ring_forecast_tk)) {
@@ -71,6 +75,11 @@ void loop() {
     if (when_ring > 0) {
       ESP_LOGD(TAG, "idx %d ringing in %lds", idx, when_ring - time(NULL));
     }
+  }
+
+  static long step_remind_tk;
+  if (bounce(&step_remind_tk)) {
+    ESP_LOGD(TAG, "motor step: %d", motor.steps());
   }
 
   static long current_ringing_tk;

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+	<script>;(function () {
+    var src = '//cdn.jsdelivr.net/npm/eruda';
+    if (!/eruda=true/.test(window.location) && localStorage.getItem('active-eruda') != 'true') return;
+    document.write('<scr' + 'ipt src="' + src + '"></scr' + 'ipt>');
+    document.write('<scr' + 'ipt>eruda.init();</scr' + 'ipt>');
+})();</script>
+	<script src="/htmx.js"></script>
+    <link rel="stylesheet" href="/pico.css">
+    <title>Hello world!</title>
+  </head>
+  <body>
+    <main class="container">
+      <h1>Hello world!</h1>
+    </main>
+  </body>
+</html>
