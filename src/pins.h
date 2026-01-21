@@ -1,10 +1,10 @@
 #ifndef PINS_H
 #define PINS_H
 
-#define LED_PIN 27
-#define BUZZER_PIN 26
-#define PRI_BUTTON_PIN 36
-#define SEC_BUTTON_PIN 39
+#define LED_PIN 33
+#define BUZZER_PIN 32
+#define PRI_BUTTON_PIN 34
+#define SEC_BUTTON_PIN 25
 
 #define RTC_SQW 35
 

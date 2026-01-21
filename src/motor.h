@@ -2,7 +2,7 @@
 #define SMC_MOTOR_H
 
 static const char MOTOR_VERSION = 0x00;
-static const int COMPARTMENTS = 12;
+static const int COMPARTMENTS = 8;
 static const char* MOTOR_PATH = "/motor";
 static const int MOTOR_STEPS = 4096;
 static const double STEPS_PER_COMPARTMENT = MOTOR_STEPS / COMPARTMENTS;

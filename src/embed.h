@@ -18,7 +18,38 @@ static const char* EMBED_INDEX_HTML_DATA = "<!doctype html>\n\
   </head>\n\
   <body>\n\
     <main class=\"container\">\n\
-      <h1>Hello world!</h1>\n\
+		<h1>Testing</h1>\n\
+		<br />\n\
+		<h2>One-off test</h2>\n\
+	  <form hx-post=\"/oneoff\" hx-swap=\"none\">\n\
+		  <input name=\"second\" type=\"number\" placeholder=\"Second\">\n\
+		  <input type=\"submit\" value=\"Set off\">\n\
+	  </form>\n\
+	  <br />\n\
+	  <h2>Spinning test</h2>\n\
+	  <form hx-post=\"/spin\" hx-swap=\"none\">\n\
+      <input name=\"compartment\" type=\"number\" min=\"1\" max=\"8\" placeholder=\"Compartment\">\n\
+	  <input type=\"submit\" value=\"Spin\">\n\
+	  </form>\n\
+	  <br />\n\
+	  <h2>Motor Position</h2>\n\
+	  <p hx-get=\"/motor_pos\" hx-trigger=\"every 1s\"></p>\n\
+	  <br />\n\
+	  <h2>Alarms</h2>\n\
+	  <div hx-get=\"/alarms\" hx-target=\"#alarms-data\" hx-trigger=\"every 1s\">\n\
+		  <table>\n\
+		  <thead>\n\
+			  <tr>\n\
+				  <th scope=\"col\">Name</th>\n\
+				  <th scope=\"col\">Compartment</th>\n\
+				  <th scope=\"col\">Rings In</th>\n\
+				  <th scope=\"col\">Days Value</th>\n\
+				  <th scope=\"col\">Last Reminded</th>\n\
+			  </tr>\n\
+		  </thead>\n\
+		  <tbody id=\"alarms-data\"></tbody>\n\
+		  </table>\n\
+	  </div>\n\
     </main>\n\
   </body>\n\
 </html>\n\

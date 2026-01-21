@@ -7,7 +7,7 @@
 #include "PsychicHttpServer.h"
 #include "alarm.h"
 #include "clock.h"
-#include "embed.h"
+#include "endpoints/endpoints.h"
 #include "motor.h"
 
 static const char* TAG = "webserver";
@@ -27,6 +27,9 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
       "/alarm", HTTP_POST, [=](PsychicRequest* req, PsychicResponse* res) {
         struct Alarm alarm;
         memset(&alarm, 0, sizeof(Alarm));
+
+        struct tm now;
+        Clock::get(&now);
 
         if (req->hasParam("name")) {
           strncpy(alarm.name, req->getParam("name")->value().c_str(),
@@ -56,6 +59,16 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
         if (req->hasParam("second")) {
           alarm.secondMark = req->getParam("second")->value().toInt();
         }
+        if (req->hasParam("in")) {
+          alarm.secondMark = req->getParam("in")->value().toInt() +
+                             (now.tm_hour * 60 * 60) + (now.tm_min * 60) +
+                             now.tm_sec;
+        }
+        if (req->hasParam("compartment")) {
+          alarm.compartment = req->getParam("compartment")->value().toInt();
+        }
+
+        ESP_LOGD(TAG, "aaaa %d", alarm.secondMark);
 
         int idx = alarms->add(&alarm);
 
@@ -63,9 +76,7 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
           return res->send(400);
         }
 
-        struct tm now;
-        Clock::get(&now);
-        assert(alarms->refresh(&now));
+        assert(alarms->refresh(&now) == 0);
 
         alarms->save_into_fs();
 
@@ -76,14 +87,15 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
         return res->send(reply);
       });
 
-  server.on("/alarm/", HTTP_DELETE,
+  server.on("/alarm", HTTP_DELETE,
             [=](PsychicRequest* req, PsychicResponse* res) {
-              long idx = req->path().substring(7).toInt();
-              ESP_LOGD(TAG, "idx is %ld", idx);
-              if (idx <= 0 || idx >= MAX_ALARMS) {
+              if (!req->hasParam("idx")) {
                 return res->send(400);
               }
-              idx--;
+              int idx = req->getParam("idx")->value().toInt();
+              if (idx < 0 || idx >= MAX_ALARMS) {
+                return res->send(400);
+              }
 
               int err = alarms->set(idx, NULL);
               ESP_LOGW(TAG, "err is %d", err);
@@ -121,74 +133,89 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
               return res->send(reply);
             });
 
-  server.on(
-      "/alarm/", HTTP_GET, [=](PsychicRequest* req, PsychicResponse* res) {
-        // TODO FIXME find a way to detect errors without checking if it is zero.
-        long idx = req->path().substring(7).toInt();
-        ESP_LOGD(TAG, "idx is %ld", idx);
-        if (idx <= 0 || idx >= MAX_ALARMS) {
-          return res->send(400);
-        }
-        idx--;
+  server.on("/alarm", HTTP_GET, [=](PsychicRequest* req, PsychicResponse* res) {
+    // TODO FIXME find a way to detect errors without checking if it is zero.
+    if (!req->hasParam("idx")) {
+      return res->send(400);
+    }
+    int idx = req->getParam("idx")->value().toInt();
+    if (idx < 0 || idx >= MAX_ALARMS) {
+      return res->send(400);
+    }
 
-        Alarm alarm;
-        if (alarms->get(idx, &alarm) != 0) {
-          return res->send(404);
-        }
+    Alarm alarm;
+    if (alarms->get(idx, &alarm) != 0) {
+      return res->send(404);
+    }
 
-        char reply[210];
-        memset(reply, 0, sizeof(reply));
-        struct tm now;
-        Clock::get(&now);
-        long when = time(NULL) +
-                    alarms->next_schedule(&alarm, now.tm_wday,
-                                          (now.tm_hour * 60 * 60) +
-                                              (now.tm_min * 60) + now.tm_sec);
+    char reply[210];
+    memset(reply, 0, sizeof(reply));
+    struct tm now;
+    Clock::get(&now);
+    long when = time(NULL) +
+                alarms->next_schedule(
+                    &alarm, now.tm_wday,
+                    (now.tm_hour * 60 * 60) + (now.tm_min * 60) + now.tm_sec);
 
-        snprintf(reply, sizeof(reply), "%s\n%s\n%d %d %d %d %d %d %ld\n%ld",
-                 alarm.name, alarm.description, alarm.category, alarm.flags,
-                 alarm.days, alarm.icon, alarm.color, alarm.secondMark,
-                 alarm.lastReminded, when);
+    snprintf(reply, sizeof(reply), "%s\n%s\n%d %d %d %d %d %d %ld\n%ld",
+             alarm.name, alarm.description, alarm.category, alarm.flags,
+             alarm.days, alarm.icon, alarm.color, alarm.secondMark,
+             alarm.lastReminded, when);
 
-        return res->send(reply);
-      });
+    return res->send(reply);
+  });
 
-  server.on(
-      "/alarms", HTTP_GET, [=](PsychicRequest* req, PsychicResponse* res) {
-        struct tm now;
-        Clock::get(&now);
+  server.on("/alarms", HTTP_GET,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              struct tm now;
+              Clock::get(&now);
 
-        for (int i = 0; i < MAX_ALARMS; i++) {
-          Alarm alarm;
-          if (int err = alarms->get(i, &alarm); err < 0) {
-            continue;
-          };
+              for (int i = 0; i < MAX_ALARMS; i++) {
+                Alarm alarm;
+                if (int err = alarms->get(i, &alarm); err < 0) {
+                  continue;
+                };
 
-          char reply[210];
-          memset(reply, 0, sizeof(reply));
-          struct tm now;
-          Clock::get(&now);
-          long when = time(NULL) +
-                      alarms->next_schedule(&alarm, now.tm_wday,
-                                            (now.tm_hour * 60 * 60) +
-                                                (now.tm_min * 60) + now.tm_sec);
+                char reply[200];
+                memset(reply, 0, sizeof(reply));
+                struct tm now;
+                Clock::get(&now);
+                long when = alarms->next_schedule(
+                    &alarm, now.tm_wday,
+                    (now.tm_hour * 60 * 60) + (now.tm_min * 60) + now.tm_sec);
 
-          snprintf(reply, sizeof(reply),
-                   "%d\n%s\n%s\n%d %d %d %d %d %d %ld\n%ld\n\n", i, alarm.name,
-                   alarm.description, alarm.category, alarm.flags, alarm.days,
-                   alarm.icon, alarm.color, alarm.secondMark,
-                   alarm.lastReminded, when);
+                snprintf(reply, sizeof(reply),
+                         "<tr><th scope=\"row\">%s</th><td>%d</td><td>%lds</"
+                         "td><td>%d</td><td>%lds ago</td></tr>",
+                         alarm.name, alarm.compartment, when, alarm.days,
+                         time(NULL) - alarm.lastReminded);
+                if (int err = res->sendChunk((uint8_t*)reply, strlen(reply));
+                    err != 0) {
+                  ESP_LOGE(TAG, "sendChunk returned %d", err);
+                  res->send(500);
+                  return err;
+                }
+              }
 
-          if (int err = res->sendChunk((uint8_t*)reply, strlen(reply));
-              err != 0) {
-            ESP_LOGE(TAG, "sendChunk returned %d", err);
-            res->send(500);
-            return err;
-          }
-        }
+              return res->finishChunking();
+            });
 
-        return res->finishChunking();
-      });
+  server.on("/attend", HTTP_POST,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              if (!req->hasParam("idx")) {
+                return res->send(400);
+              }
+
+              int idx = req->getParam("idx")->value().toInt();
+              Alarm alarm;
+              assert(alarms->get(idx, &alarm) == 0);
+
+              if (alarms->attend_idx(idx, time(NULL), 0x00, motor) != 0) {
+                return res->send(500);
+              }
+
+              return res->send(200);
+            });
 
   server.on("/oneoff", HTTP_POST,
             [=](PsychicRequest* req, PsychicResponse* res) {
@@ -230,6 +257,13 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
     return res->send(reply);
   });
 
+  server.on("/motor_pos", HTTP_GET,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              char buf[20];
+              snprintf(buf, sizeof(buf), "%d", motor->steps());
+              return res->send(buf);
+            });
+
   server.on("/spin", HTTP_POST, [=](PsychicRequest* req, PsychicResponse* res) {
     if (!req->hasParam("compartment")) {
       return res->send(400);
@@ -246,18 +280,8 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
     return res->send(200);
   });
 
-  // TODO caching and extract these into functions, optionally gzip compression
-  server.on("/", HTTP_GET, [=](PsychicRequest* req, PsychicResponse* res) {
-    return res->send(200, "text/html", EMBED_INDEX_HTML_DATA);
-  });
-  server.on("/htmx.js", HTTP_GET,
-            [=](PsychicRequest* req, PsychicResponse* res) {
-              return res->send(200, "text/javascript", EMBED_HTMX_JS_DATA);
-            });
-  server.on("/pico.css", HTTP_GET,
-            [=](PsychicRequest* req, PsychicResponse* res) {
-              return res->send(200, "text/css", EMBED_PICO_CSS_DATA);
-            });
+  register_endpoints_static(&server);
+  register_endpoints_admin(&server);
 
   // TODO FIXME WARNING
   server.on("/clearalldata", HTTP_DELETE,

@@ -17,7 +17,7 @@ int Motor::setup(void) {
     assert(false);
   };
 
-  stepper.setRpm(15);
+  stepper.setRpm(16);
   old_step_pos = current_step;
   return 0;
 }

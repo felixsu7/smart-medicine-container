@@ -16,7 +16,38 @@
   </head>
   <body>
     <main class="container">
-      <h1>Hello world!</h1>
+		<h1>Testing</h1>
+		<br />
+		<h2>One-off test</h2>
+	  <form hx-post="/oneoff" hx-swap="none">
+		  <input name="second" type="number" placeholder="Second">
+		  <input type="submit" value="Set off">
+	  </form>
+	  <br />
+	  <h2>Spinning test</h2>
+	  <form hx-post="/spin" hx-swap="none">
+      <input name="compartment" type="number" min="1" max="8" placeholder="Compartment">
+	  <input type="submit" value="Spin">
+	  </form>
+	  <br />
+	  <h2>Motor Position</h2>
+	  <p hx-get="/motor_pos" hx-trigger="every 1s"></p>
+	  <br />
+	  <h2>Alarms</h2>
+	  <div hx-get="/alarms" hx-target="#alarms-data" hx-trigger="every 1s">
+		  <table>
+		  <thead>
+			  <tr>
+				  <th scope="col">Name</th>
+				  <th scope="col">Compartment</th>
+				  <th scope="col">Rings In</th>
+				  <th scope="col">Days Value</th>
+				  <th scope="col">Last Reminded</th>
+			  </tr>
+		  </thead>
+		  <tbody id="alarms-data"></tbody>
+		  </table>
+	  </div>
     </main>
   </body>
 </html>

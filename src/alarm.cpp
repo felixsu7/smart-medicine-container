@@ -7,6 +7,7 @@
 #include "LittleFS.h"
 #include "config.h"
 #include "esp32-hal-log.h"
+#include "motor.h"
 #include "time.h"
 #include "utils.h"
 
@@ -91,19 +92,20 @@ int Alarms::ring(int idx) {
   return 0;
 }
 
-int Alarms::attend(time_t when, char flags) {
+int Alarms::attend(time_t when, char flags, Motor* motor) {
   if (ringing_flags & 1) {
     ringing_flags = !ringing_flags;
     ringing_flags |= 3;
     ringing_flags = !ringing_flags;
     earliest_idx = -1;
     ringing_idx = -1;
+    when_ring = -1;
   } else {
     if (earliest_idx == -1) {
       return -1;
     }
 
-    assert(attend_idx(earliest_idx, when, flags) == 0);
+    assert(attend_idx(earliest_idx, when, flags, motor) == 0);
   }
   // TODO
   struct tm now;
@@ -114,9 +116,13 @@ int Alarms::attend(time_t when, char flags) {
   return 0;
 }
 
-int Alarms::attend_idx(int idx, time_t when, char flags) {
+int Alarms::attend_idx(int idx, time_t when, char flags, Motor* motor) {
   if (idx < 0 || idx >= MAX_ALARMS) {
     return -1;
+  }
+
+  if (motor != NULL) {
+    motor->spin_to(list[idx].compartment);
   }
 
   list[idx].lastReminded = when;

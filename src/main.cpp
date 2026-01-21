@@ -77,10 +77,10 @@ void loop() {
     }
   }
 
-  static long step_remind_tk;
-  if (bounce(&step_remind_tk)) {
-    ESP_LOGD(TAG, "motor step: %d", motor.steps());
-  }
+  // static long step_remind_tk;
+  // if (bounce(&step_remind_tk)) {
+  //   ESP_LOGD(TAG, "motor step: %d", motor.steps());
+  // }
 
   static long current_ringing_tk;
   if (digitalRead(SEC_BUTTON_PIN) == HIGH) {
@@ -88,7 +88,7 @@ void loop() {
       if (alarms.is_ringing() == -1) {
         ESP_LOGI(TAG, "no currently ringing alarm");
       } else {
-        alarms.attend(time(NULL), 0x00);
+        alarms.attend(time(NULL), 0x00, &motor);
       }
     }
   }

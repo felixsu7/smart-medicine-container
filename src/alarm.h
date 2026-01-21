@@ -3,6 +3,7 @@
 
 #include <ctime>
 #include "./config.h"
+#include "motor.h"
 
 static const char ALARM_VERSION = 0x00;
 
@@ -25,6 +26,7 @@ struct AlarmLog {
 struct Alarm {
   char name[51];
   char description[101];
+  char compartment;
   char category;
   char flags;
   char days;  // See the Days Enum.
@@ -60,7 +62,7 @@ class Alarms {
 
   // Attends the currently ringing alarm. Returns 0 on success, -1 if there is
   // none ringing. flags is currently unused.
-  int attend(time_t when, char flags);
+  int attend(time_t when, char flags, Motor* motor);
 
   // Ring without an associated alarm at a schedule, overrides all alarms and
   // disables refreshes.
@@ -95,7 +97,7 @@ class Alarms {
   int append_log(int idx, const struct AlarmLog* log);
 
   // TODO Marks an alarm in the storage at index.
-  int attend_idx(int idx, time_t when, char flags);
+  int attend_idx(int idx, time_t when, char flags, Motor* motor);
 
   // Returns when any alarm in the storage will ring in seconds since the UNIX
   // epoch, and copies that alarm to the alarm. This does not account for
