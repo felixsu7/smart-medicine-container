@@ -17,7 +17,7 @@ int register_endpoints_static(PsychicHttpServer* server) {
         ESP_LOGE(TAG, "what?");
         return res->send(200, "text/html", EMBED_INDEX_HTML_DATA);
       }
-      char buf[257];
+      char buf[256];
       memset(buf, 0, sizeof(buf));
       int bytes;
       while (true) {

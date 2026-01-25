@@ -9,6 +9,7 @@
 #include "clock.h"
 #include "esp32-hal-gpio.h"
 #include "motor.h"
+#include "thirdparty/ST7789v_arduino.h"
 #include "utils.h"
 
 static const char* TAG = "main";
@@ -20,12 +21,23 @@ Alarms alarms;
 Webserver webserver;
 Motor motor;
 
+#define TFT_DC 16
+#define TFT_RST -1
+#define TFT_CS 17    // only for displays with CS pin
+#define TFT_MOSI 23  // for hardware SPI data pin (all of available pins)
+#define TFT_SCLK 18  // for hardware SPI sclk pin (all of available pins)
+ST7789v_arduino tft =
+    ST7789v_arduino(TFT_DC, TFT_RST, TFT_MOSI, TFT_SCLK, TFT_CS);
+
 void setup() {
   Serial.begin(115200);
   while (!Serial) {}
   Serial.setDebugOutput(true);
 
   esp_log_level_set("*", ESP_LOG_DEBUG);
+
+  tft.init(320, 240);
+  tft.fillScreen(RED);
 
   pinMode(LED_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
@@ -68,18 +80,13 @@ void loop() {
   alarms.loop();
   motor.loop();
 
-  static long ring_forecast_tk;
-  if (bounce(&ring_forecast_tk)) {
-    int idx;
-    time_t when_ring = alarms.ring_in(&idx);
-    if (when_ring > 0) {
-      ESP_LOGD(TAG, "idx %d ringing in %lds", idx, when_ring - time(NULL));
-    }
-  }
-
-  // static long step_remind_tk;
-  // if (bounce(&step_remind_tk)) {
-  //   ESP_LOGD(TAG, "motor step: %d", motor.steps());
+  // static long ring_forecast_tk;
+  // if (bounce(&ring_forecast_tk)) {
+  //   int idx;
+  //   time_t when_ring = alarms.ring_in(&idx);
+  //   if (when_ring > 0) {
+  //     ESP_LOGD(TAG, "idx %d ringing in %lds", idx, when_ring - time(NULL));
+  //   }
   // }
 
   static long current_ringing_tk;
@@ -92,6 +99,11 @@ void loop() {
       }
     }
   }
+
+  // static long touch_irq_tk;
+  // if (bounce(&touch_irq_tk)) {
+  //  ESP_LOGD(TAG, "touch irq pin: %d", analogRead(4));
+  // }
 
   static long test_notify_tk;
   if (digitalRead(PRI_BUTTON_PIN) == HIGH) {
