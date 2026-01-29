@@ -1,6 +1,6 @@
 #ifndef EMBEDDED_FILES_H
 #define EMBEDDED_FILES_H
-static const char* EMBED_INDEX_HTML_DATA = "<!doctype html>\n\
+static const char* EMBED_INDEX_HTML_DATA = "<!DOCTYPE HTML>\n\
 <html lang=\"en\">\n\
 \n\
 <head>\n\
@@ -32,6 +32,22 @@ static const char* EMBED_INDEX_HTML_DATA = "<!doctype html>\n\
 		<form hx-post=\"/spin\" hx-swap=\"none\">\n\
 			<input name=\"compartment\" type=\"number\" min=\"1\" max=\"8\" placeholder=\"Compartment\">\n\
 			<input type=\"submit\" value=\"Spin\">\n\
+		</form>\n\
+		<br />\n\
+		<h2>Rect Test</h2>\n\
+		<form hx-post=\"/recttest\" hx-swap=\"none\">\n\
+			<input name=\"x\" type=\"number\" placeholder=\"X Pos\">\n\
+			<input name=\"y\" type=\"number\" placeholder=\"Y Pos\">\n\
+			<input name=\"w\" type=\"number\" placeholder=\"Width\">\n\
+			<input name=\"h\" type=\"number\" placeholder=\"Height\">\n\
+			<input name=\"c\" type=\"number\" placeholder=\"Color\">\n\
+			<input type=\"submit\" value=\"Draw Rectangle\">\n\
+		</form>\n\
+		<br />\n\
+		<h2>Fill Test</h2>\n\
+		<form hx-post=\"/filltest\" hx-swap=\"none\">\n\
+			<input name=\"c\" type=\"number\" placeholder=\"Color\">\n\
+			<input type=\"submit\" value=\"Fill Screen\">\n\
 		</form>\n\
 		<br />\n\
 		<h2>Motor Position</h2>\n\

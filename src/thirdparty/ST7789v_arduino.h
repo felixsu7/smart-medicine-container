@@ -13,30 +13,6 @@
 
 #include "Arduino.h"
 
-// #define SPI_FREQ 16000000
-
-#if defined(__AVR__) || defined(CORE_TEENSY)
-#include <avr/pgmspace.h>
-#define USE_FAST_IO false
-typedef volatile uint8_t RwReg;
-#elif defined(ARDUINO_STM32_FEATHER)
-typedef volatile uint32 RwReg;
-#define USE_FAST_IO false
-#elif defined(ARDUINO_FEATHER52)
-typedef volatile uint32_t RwReg;
-#define USE_FAST_IO false
-#elif defined(ESP8266)
-#include <pgmspace.h>
-#elif defined(__SAM3X8E__)
-#undef __FlashStringHelper::F(string_literal)
-#define F(string_literal) string_literal
-#include <include/pio.h>
-#define PROGMEM
-#define pgm_read_byte(addr) (*(const unsigned char*)(addr))
-#define pgm_read_word(addr) (*(const unsigned short*)(addr))
-typedef unsigned char prog_uchar;
-#endif
-
 #define ST7789_TFTWIDTH 320
 #define ST7789_TFTHEIGHT 240
 
@@ -108,8 +84,6 @@ typedef unsigned char prog_uchar;
 class ST7789v_arduino {
 
  public:
-  ST7789v_arduino(int8_t DC, int8_t RST, int8_t SID, int8_t SCLK,
-                  int8_t CS = -1);
   ST7789v_arduino(int8_t DC, int8_t RST, int8_t CS = -1);
 
   void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1),
@@ -164,24 +138,12 @@ class ST7789v_arduino {
   inline void DC_HIGH(void);
   inline void DC_LOW(void);
 
-  boolean _hwSPI;
-  boolean _SPI9bit;
   boolean _DCbit;
 
   uint8_t rotation;
   uint16_t _width, _height;
 
-  int8_t _cs, _dc, _rst, _sid, _sclk;
-
-#if defined(USE_FAST_IO)
-  volatile RwReg *dataport, *clkport, *csport, *dcport;
-
-#if defined(__AVR__) || defined(CORE_TEENSY)  // 8 bit!
-  uint8_t datapinmask, clkpinmask, cspinmask, dcpinmask;
-#else  // 32 bit!
-  uint32_t datapinmask, clkpinmask, cspinmask, dcpinmask;
-#endif
-#endif
+  int8_t _cs, _dc;
 };
 
 #endif

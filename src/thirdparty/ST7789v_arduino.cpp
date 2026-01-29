@@ -14,9 +14,9 @@
 #include "SPI.h"
 // #include <PI.h >
 
-static const uint8_t PROGMEM
-    cmd_240x240[] = {  // Initialization commands for 7789 screens
-        10,            // 9 commands in list:
+static const uint8_t init_commands[] =
+    {        // Initialization commands for 7789 screens
+        10,  // 9 commands in list:
         ST7789_SWRESET,
         ST_CMD_DELAY,  // 1: Software reset, no args, w/delay
         150,           // 150 ms delay
@@ -56,105 +56,44 @@ static const uint8_t PROGMEM
 //   return (x << 11) | (x & 0x07E0) | (x >> 11);
 // }
 
-// #if defined (SPI_HAS_TRANSACTION)
-static SPISettings mySPISettings;
-// #elif defined (__AVR__) || defined(CORE_TEENSY)
-//   static uint8_t SPCRbackup;
-//   static uint8_t mySPCR;
-// #endif
-
-#if defined(SPI_HAS_TRANSACTION)
-#define SPI_BEGIN_TRANSACTION() \
-  if (_hwSPI)                   \
-    SPI.begin();
-#define SPI_END_TRANSACTION() \
-  if (_hwSPI)                 \
-  SPI.endTransaction()
-#else
-#define SPI_BEGIN_TRANSACTION() \
-  if (_hwSPI)                   \
-    SPI.begin();
-#define SPI_END_TRANSACTION() \
-  if (_hwSPI)                 \
-  SPI.endTransaction()
-#endif
-
-// Constructor when using software SPI.  All output pins are configurable.
-ST7789v_arduino::ST7789v_arduino(int8_t dc, int8_t rst, int8_t sid, int8_t sclk,
-                                 int8_t cs) {
-  _cs = cs;
-  _dc = dc;
-  _sid = sid;
-  _sclk = sclk;
-  _rst = rst;
-  _hwSPI = false;
-  rotation = 0;
-  _width = ST7789_TFTWIDTH;
-  _height = ST7789_TFTHEIGHT;
-  if (dc == -1)
-    _SPI9bit = true;
-  else
-    _SPI9bit = false;
-}
+static SPISettings TFT_SPISettings(16000000, MSBFIRST, SPI_MODE0);
 
 // Constructor when using hardware SPI.  Faster, but must use SPI pins
 // specific to each board type (e.g. 11,13 for Uno, 51,52 for Mega, etc.)
 ST7789v_arduino::ST7789v_arduino(int8_t dc, int8_t rst, int8_t cs) {
   _cs = cs;
   _dc = dc;
-  _rst = rst;
-  _hwSPI = true;
-  _SPI9bit = false;
-  _sid = _sclk = -1;
 }
 
 inline void ST7789v_arduino::spiwrite(uint8_t c) {
-
-  //Serial.println(c, HEX);
-  // FIXME TODO VERY SLOW
-  for (uint8_t bit = 0x80; bit; bit >>= 1) {
-    digitalWrite(_sclk, LOW);
-    if (c & bit)
-      digitalWrite(_sid, HIGH);
-    else
-      digitalWrite(_sid, LOW);
-    digitalWrite(_sclk, HIGH);
-  }
+  SPI.transfer(c);
 }
 
 inline void ST7789v_arduino::spiwrite12(uint16_t c) {
-  // FIXME TODO VERY SLOW
-  for (uint16_t bit = 0x800; bit; bit >>= 1) {
-    digitalWrite(_sclk, LOW);
-    if (c & bit)
-      digitalWrite(_sid, HIGH);
-    else
-      digitalWrite(_sid, LOW);
-    digitalWrite(_sclk, HIGH);
-  }
+  SPI.transferBits(c, NULL, 12);
 }
 
 void ST7789v_arduino::writecommand(uint8_t c) {
 
   DC_LOW();
   CS_LOW();
-  SPI_BEGIN_TRANSACTION();
+  SPI.beginTransaction(TFT_SPISettings);
 
   spiwrite(c);
 
   CS_HIGH();
-  SPI_END_TRANSACTION();
+  SPI.endTransaction();
 }
 
 void ST7789v_arduino::writedata(uint8_t c) {
-  SPI_BEGIN_TRANSACTION();
+  SPI.beginTransaction(TFT_SPISettings);
   DC_HIGH();
   CS_LOW();
 
   spiwrite(c);
 
   CS_HIGH();
-  SPI_END_TRANSACTION();
+  SPI.endTransaction();
 }
 
 // Companion code to the above tables.  Reads and issues
@@ -165,11 +104,6 @@ void ST7789v_arduino::displayInit(const uint8_t* addr) {
   uint16_t ms;
   //<-----------------------------------------------------------------------------------------
   DC_HIGH();
-#if defined(USE_FAST_IO)
-  *clkport |= clkpinmask;
-#else
-  digitalWrite(_sclk, HIGH);
-#endif
   //<-----------------------------------------------------------------------------------------
 
   numCommands = pgm_read_byte(addr++);    // Number of commands to follow
@@ -201,59 +135,11 @@ void ST7789v_arduino::commonInit(const uint8_t* cmdList) {
     pinMode(_cs, OUTPUT);
   }
 
-#if defined(USE_FAST_IO)
-  dcport = portOutputRegister(digitalPinToPort(_dc));
-  dcpinmask = digitalPinToBitMask(_dc);
-  if (_cs) {
-    csport = portOutputRegister(digitalPinToPort(_cs));
-    cspinmask = digitalPinToBitMask(_cs);
-  }
-
-#endif
-
-  if (_hwSPI) {  // Using hardware SPI
-                 // #if defined (SPI_HAS_TRANSACTION)
-    SPI.begin();
-    SPI.setClockDivider(SPI_CLOCK_DIV2);
-    mySPISettings = SPISettings(0, MSBFIRST, SPI_MODE2);
-
-    // #elif defined (__AVR__) || defined(CORE_TEENSY)
-    //     SPCRbackup = SPCR;
-    //     SPI.begin();
-    //     SPI.setClockDivider(SPI_CLOCK_DIV4);
-    //     SPI.setDataMode(SPI_MODE2);
-    //     mySPCR = SPCR; // save our preferred state
-    //     SPCR = SPCRbackup;  // then restore
-    // #elif defined (__SAM3X8E__)
-    //     SPI.begin();
-    //     SPI.setClockDivider(21); //4MHz
-    //     SPI.setDataMode(SPI_MODE2);
-    // #endif
-  } else {
-    pinMode(_sclk, OUTPUT);
-    pinMode(_sid, OUTPUT);
-    digitalWrite(_sclk, LOW);
-    digitalWrite(_sid, LOW);
-
-#if defined(USE_FAST_IO)
-    clkport = portOutputRegister(digitalPinToPort(_sclk));
-    dataport = portOutputRegister(digitalPinToPort(_sid));
-    clkpinmask = digitalPinToBitMask(_sclk);
-    datapinmask = digitalPinToBitMask(_sid);
-#endif
-  }
+  SPI.begin(18, 19, 23, -1);
+  SPI.setClockDivider(SPI_CLOCK_DIV2);
 
   // toggle RST low to reset; CS low so it'll listen to us
   CS_LOW();
-  if (_rst != -1) {
-    pinMode(_rst, OUTPUT);
-    digitalWrite(_rst, HIGH);
-    delay(50);
-    digitalWrite(_rst, LOW);
-    delay(50);
-    digitalWrite(_rst, HIGH);
-    delay(50);
-  }
 
   if (cmdList)
     displayInit(cmdList);
@@ -313,17 +199,17 @@ void ST7789v_arduino::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1,
   writecommand(ST7789_RAMWR);  // write to RAM
 }
 
-void ST7789v_arduino::pushColor(uint16_t color) {
-  SPI_BEGIN_TRANSACTION();
-  DC_HIGH();
-  CS_LOW();
-
-  spiwrite(color >> 8);
-  spiwrite(color);
-
-  CS_HIGH();
-  SPI_END_TRANSACTION();
-}
+// void ST7789v_arduino::pushColor(uint16_t color) {
+//   SPI_BEGIN_TRANSACTION();
+//   DC_HIGH();
+//   CS_LOW();
+//
+//   spiwrite(color >> 8);
+//   spiwrite(color);
+//
+//   CS_HIGH();
+//   SPI_END_TRANSACTION();
+// }
 
 void ST7789v_arduino::drawPixel(int16_t x, int16_t y, uint16_t color) {
 
@@ -332,14 +218,14 @@ void ST7789v_arduino::drawPixel(int16_t x, int16_t y, uint16_t color) {
 
   setAddrWindow(x, y, x + 1, y + 1);
 
-  SPI_BEGIN_TRANSACTION();
+  SPI.beginTransaction(TFT_SPISettings);
   DC_HIGH();
   CS_LOW();
 
   spiwrite12(color);
 
   CS_HIGH();
-  SPI_END_TRANSACTION();
+  SPI.endTransaction();
 }
 
 void ST7789v_arduino::drawFastVLine(int16_t x, int16_t y, int16_t h,
@@ -352,9 +238,7 @@ void ST7789v_arduino::drawFastVLine(int16_t x, int16_t y, int16_t h,
     h = _height - y;
   setAddrWindow(x, y, x, y + h - 1);
 
-  uint8_t hi = color >> 8, lo = color;
-
-  SPI_BEGIN_TRANSACTION();
+  SPI.beginTransaction(TFT_SPISettings);
   DC_HIGH();
   CS_LOW();
 
@@ -363,7 +247,7 @@ void ST7789v_arduino::drawFastVLine(int16_t x, int16_t y, int16_t h,
   }
 
   CS_HIGH();
-  SPI_END_TRANSACTION();
+  SPI.endTransaction();
 }
 
 void ST7789v_arduino::drawFastHLine(int16_t x, int16_t y, int16_t w,
@@ -376,7 +260,7 @@ void ST7789v_arduino::drawFastHLine(int16_t x, int16_t y, int16_t w,
     w = _width - x;
   setAddrWindow(x, y, x + w - 1, y);
 
-  SPI_BEGIN_TRANSACTION();
+  SPI.beginTransaction(TFT_SPISettings);
   DC_HIGH();
   CS_LOW();
 
@@ -385,7 +269,7 @@ void ST7789v_arduino::drawFastHLine(int16_t x, int16_t y, int16_t w,
   }
 
   CS_HIGH();
-  SPI_END_TRANSACTION();
+  SPI.endTransaction();
 }
 
 void ST7789v_arduino::fillScreen(uint16_t color) {
@@ -432,7 +316,7 @@ void ST7789v_arduino::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
     h = _height - y;
   setAddrWindow(x, y, x + w - 1, y + h - 1);
 
-  SPI_BEGIN_TRANSACTION();
+  SPI.beginTransaction(TFT_SPISettings);
 
   DC_HIGH();
   CS_LOW();
@@ -450,7 +334,7 @@ void ST7789v_arduino::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
   }
 
   CS_HIGH();
-  SPI_END_TRANSACTION();
+  SPI.endTransaction();
 }
 
 // Pass 8-bit (each) R,G,B, get back 16-bit packed color
@@ -466,40 +350,24 @@ void ST7789v_arduino::invertDisplay(boolean i) {
 
 inline void ST7789v_arduino::CS_HIGH(void) {
   if (_cs) {
-#if defined(USE_FAST_IO)
-    *csport |= cspinmask;
-#else
     digitalWrite(_cs, HIGH);
-#endif
   }
 }
 
 inline void ST7789v_arduino::CS_LOW(void) {
   if (_cs) {
-#if defined(USE_FAST_IO)
-    *csport &= ~cspinmask;
-#else
     digitalWrite(_cs, LOW);
-#endif
   }
 }
 
 inline void ST7789v_arduino::DC_HIGH(void) {
   _DCbit = true;
-#if defined(USE_FAST_IO)
-  *dcport |= dcpinmask;
-#else
   digitalWrite(_dc, HIGH);
-#endif
 }
 
 inline void ST7789v_arduino::DC_LOW(void) {
   _DCbit = false;
-#if defined(USE_FAST_IO)
-  *dcport &= ~dcpinmask;
-#else
   digitalWrite(_dc, LOW);
-#endif
 }
 
 void ST7789v_arduino::init(uint16_t width, uint16_t height) {
@@ -510,7 +378,7 @@ void ST7789v_arduino::init(uint16_t width, uint16_t height) {
   _height = 320;
   _width = 240;
 
-  displayInit(cmd_240x240);
+  displayInit(init_commands);
 
   setRotation(2);
 }
@@ -523,7 +391,7 @@ void ST7789v_arduino::drawImage(int16_t x, int16_t y, int16_t w, int16_t h,
     return;
   setAddrWindow(x, y, x + w - 1, y + h - 1);
 
-  SPI_BEGIN_TRANSACTION();
+  SPI.beginTransaction(TFT_SPISettings);
 
   DC_HIGH();
   CS_LOW();
@@ -565,7 +433,7 @@ void ST7789v_arduino::drawImage(int16_t x, int16_t y, int16_t w, int16_t h,
   }
 
   CS_HIGH();
-  SPI_END_TRANSACTION();
+  SPI.endTransaction();
 }
 
 // ----------------------------------------------------------
@@ -576,7 +444,7 @@ void ST7789v_arduino::drawImageF(int16_t x, int16_t y, int16_t w, int16_t h,
     return;
   setAddrWindow(x, y, x + w - 1, y + h - 1);
 
-  SPI_BEGIN_TRANSACTION();
+  SPI.beginTransaction(TFT_SPISettings);
 
   DC_HIGH();
   CS_LOW();
@@ -618,7 +486,7 @@ void ST7789v_arduino::drawImageF(int16_t x, int16_t y, int16_t w, int16_t h,
   }
 
   CS_HIGH();
-  SPI_END_TRANSACTION();
+  SPI.endTransaction();
 }
 
 // ----------------------------------------------------------
@@ -766,11 +634,11 @@ uint16_t ST7789v_arduino::rgbWheel(int idx) {
 
 void ST7789v_arduino::startWrite(void) {
 
-  SPI_BEGIN_TRANSACTION();
+  SPI.beginTransaction(TFT_SPISettings);
   CS_LOW();
 }
 
 void ST7789v_arduino::endWrite(void) {
   CS_HIGH();
-  SPI_END_TRANSACTION();
+  SPI.endTransaction();
 }

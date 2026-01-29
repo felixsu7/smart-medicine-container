@@ -1,5 +1,6 @@
 <!DOCTYPE HTML>
 <html lang="en">
+
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,6 +15,7 @@
 	<link rel="stylesheet" href="/pico.css">
 	<title>Hello world!</title>
 </head>
+
 <body>
 	<main class="container">
 		<h1>Testing</h1>
@@ -28,6 +30,22 @@
 		<form hx-post="/spin" hx-swap="none">
 			<input name="compartment" type="number" min="1" max="8" placeholder="Compartment">
 			<input type="submit" value="Spin">
+		</form>
+		<br />
+		<h2>Rect Test</h2>
+		<form hx-post="/recttest" hx-swap="none">
+			<input name="x" type="number" placeholder="X Pos">
+			<input name="y" type="number" placeholder="Y Pos">
+			<input name="w" type="number" placeholder="Width">
+			<input name="h" type="number" placeholder="Height">
+			<input name="c" type="number" placeholder="Color">
+			<input type="submit" value="Draw Rectangle">
+		</form>
+		<br />
+		<h2>Fill Test</h2>
+		<form hx-post="/filltest" hx-swap="none">
+			<input name="c" type="number" placeholder="Color">
+			<input type="submit" value="Fill Screen">
 		</form>
 		<br />
 		<h2>Motor Position</h2>
@@ -50,4 +68,5 @@
 		</div>
 	</main>
 </body>
+
 </html>

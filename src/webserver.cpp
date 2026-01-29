@@ -9,10 +9,11 @@
 #include "clock.h"
 #include "endpoints/endpoints.h"
 #include "motor.h"
+#include "thirdparty/ST7789v_arduino.h"
 
 static const char* TAG = "webserver";
 
-int Webserver::setup(Alarms* alarms, Motor* motor) {
+int Webserver::setup(Alarms* alarms, Motor* motor, ST7789v_arduino* tft) {
   // TODO
   assert(MDNS.begin(DEFAULT_HOSTNAME));
   assert(MDNS.addService("http", "tcp", 80));
@@ -198,6 +199,44 @@ int Webserver::setup(Alarms* alarms, Motor* motor) {
               }
 
               return res->finishChunking();
+            });
+
+  server.on("/filltest", HTTP_POST,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              if (!req->hasParam("color")) {
+                return res->send(400);
+              }
+
+              tft->fillScreen(req->getParam("color")->value().toInt() & 0xFFF);
+
+              return res->send(200);
+            });
+
+  server.on("/recttest", HTTP_POST,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              if (!req->hasParam("x")) {
+                return res->send(400);
+              }
+              if (!req->hasParam("y")) {
+                return res->send(400);
+              }
+              if (!req->hasParam("w")) {
+                return res->send(400);
+              }
+              if (!req->hasParam("h")) {
+                return res->send(400);
+              }
+              if (!req->hasParam("c")) {
+                return res->send(400);
+              }
+
+              tft->fillRect(req->getParam("x")->value().toInt(),
+                            req->getParam("y")->value().toInt(),
+                            req->getParam("w")->value().toInt(),
+                            req->getParam("h")->value().toInt(),
+                            req->getParam("c")->value().toInt());
+
+              return res->send(200);
             });
 
   server.on("/attend", HTTP_POST,
