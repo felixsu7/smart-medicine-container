@@ -24,7 +24,6 @@
 #define _XPT2046_Calibrated_h_
 
 #include <SPI.h>
-#include "Arduino.h"
 
 #if ARDUINO < 10600
 #error "Arduino 1.6.0 or later (SPI library) is required"
@@ -97,8 +96,6 @@ class XPT2046_Calibrated {
 
   uint8_t bufferSize() { return 1; }
 
-  void setRotation(uint8_t n) { rotation = n % 4; }
-
   void calibrate(TS_Calibration c) { cal = c; }
 
   // protected:
@@ -106,7 +103,7 @@ class XPT2046_Calibrated {
 
  private:
   void update();
-  uint8_t csPin, tirqPin, rotation = 1;
+  uint8_t csPin, tirqPin = 1;
   int16_t xraw = 0, yraw = 0, zraw = 0;
   uint32_t msraw = 0x80000000;
   TS_Calibration cal;

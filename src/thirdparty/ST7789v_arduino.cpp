@@ -15,8 +15,8 @@
 // #include <PI.h >
 
 static const uint8_t init_commands[] =
-    {        // Initialization commands for 7789 screens
-        10,  // 9 commands in list:
+    {       // Initialization commands for 7789 screens
+        9,  // 9 commands in list:
         ST7789_SWRESET,
         ST_CMD_DELAY,  // 1: Software reset, no args, w/delay
         150,           // 150 ms delay
@@ -56,7 +56,7 @@ static const uint8_t init_commands[] =
 //   return (x << 11) | (x & 0x07E0) | (x >> 11);
 // }
 
-static SPISettings TFT_SPISettings(16000000, MSBFIRST, SPI_MODE0);
+static SPISettings TFT_SPISettings(32000000, MSBFIRST, SPI_MODE0);
 
 // Constructor when using hardware SPI.  Faster, but must use SPI pins
 // specific to each board type (e.g. 11,13 for Uno, 51,52 for Mega, etc.)
@@ -70,7 +70,10 @@ inline void ST7789v_arduino::spiwrite(uint8_t c) {
 }
 
 inline void ST7789v_arduino::spiwrite12(uint16_t c) {
-  SPI.transferBits(c, NULL, 12);
+  // Fun fact! According to Espressif's documentation, Bits 7 to 0 gets transferred first then Bits 15 to 8 would be transferred next.
+  // So the format would B0RG where 0 should be empty.
+  // SPI.transferBits(((c & 0x0F) << 12) | (c >> 4), NULL, 12);
+  SPI.transferBits(c << 4, NULL, 12);
 }
 
 void ST7789v_arduino::writecommand(uint8_t c) {
@@ -98,7 +101,7 @@ void ST7789v_arduino::writedata(uint8_t c) {
 
 // Companion code to the above tables.  Reads and issues
 // a series of LCD commands stored in PROGMEM byte array.
-void ST7789v_arduino::displayInit(const uint8_t* addr) {
+void ST7789v_arduino::displayInit(const uint8_t* commands) {
 
   uint8_t numCommands, numArgs;
   uint16_t ms;
@@ -106,18 +109,19 @@ void ST7789v_arduino::displayInit(const uint8_t* addr) {
   DC_HIGH();
   //<-----------------------------------------------------------------------------------------
 
-  numCommands = pgm_read_byte(addr++);    // Number of commands to follow
-  while (numCommands--) {                 // For each command...
-    writecommand(pgm_read_byte(addr++));  //   Read, issue command
-    numArgs = pgm_read_byte(addr++);      //   Number of args to follow
-    ms = numArgs & ST_CMD_DELAY;          //   If hibit set, delay follows args
-    numArgs &= ~ST_CMD_DELAY;             //   Mask out delay bit
-    while (numArgs--) {                   //   For each argument...
-      writedata(pgm_read_byte(addr++));   //     Read, issue argument
+  int idx = 0;
+  numCommands = commands[idx++];    // Number of commands to follow
+  while (numCommands--) {           // For each command...
+    writecommand(commands[idx++]);  //   Read, issue command
+    numArgs = commands[idx++];      //   Number of args to follow
+    ms = numArgs & ST_CMD_DELAY;    //   If hibit set, delay follows args
+    numArgs &= ~ST_CMD_DELAY;       //   Mask out delay bit
+    while (numArgs--) {             //   For each argument...
+      writedata(commands[idx++]);   //     Read, issue argument
     }
 
     if (ms) {
-      ms = pgm_read_byte(addr++);  // Read post-command delay time (ms)
+      ms = commands[idx++];  // Read post-command delay time (ms)
       if (ms == 255)
         ms = 500;  // If 255, delay for 500 ms
       delay(ms);
@@ -143,39 +147,9 @@ void ST7789v_arduino::commonInit(const uint8_t* cmdList) {
 
   if (cmdList)
     displayInit(cmdList);
-}
-
-void ST7789v_arduino::setRotation(uint8_t m) {
 
   writecommand(ST7789_MADCTL);
-  rotation = m % 4;  // can't be higher than 3
-  switch (rotation) {
-    case 0:
-      writedata(ST7789_MADCTL_MX | ST7789_MADCTL_MY | ST7789_MADCTL_RGB);
-
-      _xstart = _colstart;
-      _ystart = _rowstart;
-      break;
-    case 1:
-      writedata(ST7789_MADCTL_MY | ST7789_MADCTL_MV | ST7789_MADCTL_RGB);
-
-      _ystart = _colstart;
-      _xstart = _rowstart;
-      break;
-    case 2:
-      writedata(ST7789_MADCTL_RGB);
-
-      _xstart = _colstart;
-      _ystart = _rowstart;
-      break;
-
-    case 3:
-      writedata(ST7789_MADCTL_MX | ST7789_MADCTL_MV | ST7789_MADCTL_RGB);
-
-      _ystart = _colstart;
-      _xstart = _rowstart;
-      break;
-  }
+  writedata(ST7789_MADCTL_MX | ST7789_MADCTL_MV | ST7789_MADCTL_RGB);
 }
 
 void ST7789v_arduino::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1,
@@ -379,8 +353,6 @@ void ST7789v_arduino::init(uint16_t width, uint16_t height) {
   _width = 240;
 
   displayInit(init_commands);
-
-  setRotation(2);
 }
 
 // ----------------------------------------------------------

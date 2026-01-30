@@ -21,11 +21,12 @@
  */
 
 #include "XPT2046_Calibrated.h"
+#include <Arduino.h>
 
 #define Z_THRESHOLD 550
 #define Z_THRESHOLD_INT 75
 #define MSEC_THRESHOLD 10
-#define SPI_SETTING SPISettings(1000, MSBFIRST, SPI_MODE0)
+#define SPI_SETTING SPISettings(1000000, MSBFIRST, SPI_MODE0)
 
 static XPT2046_Calibrated* isrPinptr;
 void isrPin(void);
@@ -121,12 +122,14 @@ void XPT2046_Calibrated::update() {
   int16_t z2 = SPI.transfer16(0x91 /* X */) >> 3;
   z -= z2;
   if (z >= Z_THRESHOLD) {
-    ESP_LOGD("touch", "z is %d", z);
     SPI.transfer16(0x91 /* X */);  // dummy X measure, 1st is always noisy
     data[0] = SPI.transfer16(0xD1 /* Y */) >> 3;
     data[1] = SPI.transfer16(0x91 /* X */) >> 3;  // make 3 x-y measurements
     data[2] = SPI.transfer16(0xD1 /* Y */) >> 3;
     data[3] = SPI.transfer16(0x91 /* X */) >> 3;
+
+    // ESP_LOGD("touch", "spi transferred: %04X %04X %04X %04X", data[0], data[1],
+    // data[2], data[3]);
   } else
     data[0] = data[1] = data[2] = data[3] =
         0;  // Compiler warns these values may be used unset on early exit.
@@ -134,7 +137,7 @@ void XPT2046_Calibrated::update() {
   data[5] = SPI.transfer16(0) >> 3;
   digitalWrite(csPin, HIGH);
   SPI.endTransaction();
-  //Serial.printf("z=%d  ::  z1=%d,  z2=%d  ", z, z1, z2);
+  // Serial.printf("z=%d  ::  z1=%d,  z2=%d  ", z, z1, z2);
   if (z < 0)
     z = 0;
   if (z < Z_THRESHOLD) {  //	if ( !touched ) {
@@ -149,75 +152,25 @@ void XPT2046_Calibrated::update() {
   zraw = z;
 
   // Average pair with least distance between each measured x then y
-  //Serial.printf("    z1=%d,z2=%d  ", z1, z2);
-  //Serial.printf("p=%d,  %d,%d  %d,%d  %d,%d", zraw,
-  //data[0], data[1], data[2], data[3], data[4], data[5]);
+  Serial.printf("z1=%d,z2=%d | ", z1, z2);
+  Serial.printf("p=%d,  %d,%d  %d,%d  %d,%d", zraw, data[0], data[1], data[2],
+                data[3], data[4], data[5]);
   int16_t x = besttwoavg(data[0], data[2], data[4]);
   int16_t y = besttwoavg(data[1], data[3], data[5]);
 
-  //Serial.printf("    %d,%d", x, y);
-  //Serial.println();
-  //check for x and y as y shoots up to incorrectly high numbers when, for example, the touchscreen is off.
-  if (z >= Z_THRESHOLD && x < 500 && y < 500) {
+  Serial.printf("| %d,%d", x, y);
+  // Serial.println();
+  // Check for x and y as y shoots up to incorrectly high numbers when, for example, the touchscreen is off.
+  if (z >= Z_THRESHOLD) {
     msraw = now;  // good read completed, set wait
     if (cal.defined) {
-
       xraw = cal.alphaX * x + cal.betaX * y + cal.deltaX;
       yraw = cal.alphaY * x + cal.betaY * y + cal.deltaY;
 
-      int32_t rot_x;
-      int32_t rot_y;
-
-      switch (rotation % 4) {
-        case 0:
-          rot_x = cal.screenWidth - yraw;
-          rot_y = xraw;
-          if (rot_x < 0) {
-            rot_x = 0;
-          }
-          break;
-        case 1:
-          rot_x = xraw;
-          rot_y = yraw;
-          break;
-        case 2:
-          rot_x = yraw;
-          rot_y = cal.screenHeight - xraw;
-          if (rot_y < 0) {
-            rot_y = 0;
-          }
-          break;
-        case 3:
-          rot_x = cal.screenWidth - xraw;
-          rot_y = cal.screenHeight - yraw;
-          if (rot_x < 0) {
-            rot_x = 0;
-          }
-          if (rot_y < 0) {
-            rot_y = 0;
-          }
-          break;
-      }
-      xraw = rot_x;
-      yraw = rot_y;
+      Serial.printf("  cal: %d,%d\n", xraw, yraw);
     } else {
-      switch (rotation) {
-        case 0:
-          xraw = 4095 - y;
-          yraw = x;
-          break;
-        case 1:
-          xraw = x;
-          yraw = y;
-          break;
-        case 2:
-          xraw = y;
-          yraw = 4095 - x;
-          break;
-        default:  // 3
-          xraw = 4095 - x;
-          yraw = 4095 - y;
-      }
+      xraw = 4095 - x;
+      yraw = 4095 - y;
     }
   }
 }

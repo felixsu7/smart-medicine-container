@@ -21,7 +21,6 @@
 
 static uint16_t const SCREEN_WIDTH = 320;
 static uint16_t const SCREEN_HEIGHT = 240;
-// static uint8_t const SCREEN_ROTATION = 1U;
 
 enum class PointID { NONE = -1, A, B, C, COUNT };
 
@@ -106,17 +105,15 @@ void setup() {
   // Serial.println(msg);
 
   tft.init(320, 240);
-  // tft.setRotation(SCREEN_ROTATION);
   tft.fillScreen(BLACK);
   // tft.setTextSize(1);
   // tft.setTextColor(ILI9341_WHITE);
 
   assert(ts.begin());
-  // ts.setRotation(SCREEN_ROTATION);
   ts.calibrate(cal);
 
   // draw the crosshairs on screen only once
-  for (int i = (int)PointID::NONE + 1; i < (int)PointID::COUNT; ++i) {
+  for (int i = 0; i < sizeof(_screenPoint) / sizeof(_screenPoint[0]); i++) {
     crosshair(_screenPoint[i]);
   }
 
@@ -259,32 +256,36 @@ uint16_t distance(TS_Point a, TS_Point b) {
 
 void drawMapping(PointID n, TS_Point tp) {
 
-  static uint8_t const BUF_LEN = 64;
-  static char buf[BUF_LEN] = {'\0'};
-
-  static uint16_t lineHeight = (uint16_t)(1.5F * 8.0F + 0.5F);
-  static uint16_t lineSpace = 1U;
-
-  int16_t posX, posY;
-  uint16_t sizeW, sizeH;
-  uint16_t posLeft = 6U;
-  uint16_t posTop =
-      SCREEN_HEIGHT - (3U - (uint16_t)n) * (lineHeight + lineSpace);
-
-  TS_Point sp = _screenPoint[(int)n];
+  // static uint8_t const BUF_LEN = 64;
+  // static char buf[BUF_LEN] = {'\0'};
+  //
+  // static uint16_t lineHeight = (uint16_t)(1.5F * 8.0F + 0.5F);
+  // static uint16_t lineSpace = 1U;
+  //
+  // int16_t posX, posY;
+  // uint16_t sizeW, sizeH;
+  // uint16_t posLeft = 6U;
+  // uint16_t posTop =
+  //     SCREEN_HEIGHT - (3U - (uint16_t)n) * (lineHeight + lineSpace);
+  //
+  // TS_Point sp = _screenPoint[(int)n];
 
   // construct the line buffer
-  snprintf(buf, BUF_LEN, "%c (%u,%u) = (%u,%u)", (uint8_t)n + 'A', sp.x, sp.y,
-           tp.x, tp.y);
+  // snprintf(buf, BUF_LEN, "%c (%u,%u) = (%u,%u)", (uint8_t)n + 'A', sp.x, sp.y,
+  // tp.x, tp.y);
 
   // print the current line to serial port for debugging
-  Serial.printf("%s\n", buf);
+  // Serial.printf("%s\n", buf);
 
   // erase the previous line
   // tft.getTextBounds(buf, posLeft, posTop, &posX, &posY, &sizeW, &sizeH);
-  // tft.fillRect(tp.x - 2, tp.y - 2, 5, 5, RED);
-  tft.drawFastHLine(0, tp.y, 320, RED);
-  tft.drawFastVLine(tp.x, 0, 240, GREEN);
+  // tft.fillRect(tp.x - 2, tp.y - 2, 5, 5, GREEN);
+  //
+  // what? TODO FIXME
+  // tft.drawFastHLine(0, tp.y, 240, GREEN);
+  // tft.drawFastVLine(tp.x, 0, 320, GREEN);
+  // tft.drawPixel(tp.x, tp.y, WHITE);
+  // tft.fillRect(tp.x, tp.y, 4, 4, WHITE);
 
   // draw the current line
   // tft.setCursor(posLeft, posTop);
