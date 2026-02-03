@@ -11,13 +11,8 @@
 #ifndef _ADAFRUIT_ST7789H_
 #define _ADAFRUIT_ST7789H_
 
+#include "Adafruit_GFX.h"
 #include "Arduino.h"
-
-#define ST7789_TFTWIDTH 320
-#define ST7789_TFTHEIGHT 240
-
-#define ST7789_240x240_XSTART 0
-#define ST7789_240x240_YSTART 0
 
 #define ST_CMD_DELAY 0x80
 
@@ -63,49 +58,54 @@
 #define ST7789_MADCTL_RGB 0x00
 
 // Color definitions
-#define BLACK 0x000
-#define RED 0xF00
-#define ROSE 0xF08
-#define MAGENTA 0xF0F
-#define VIOLET 0x80F
-#define BLUE 0x000F
-#define AZURE 0x08F
-#define CYAN 0x0FF
-#define SPRING_GREEN 0x0F8
-#define GREEN 0x0F0
-#define CHARTREUSE 0x8F0
-#define YELLOW 0xFF0
-#define ORANGE 0xF80
-#define WHITE 0xFFF
+// A color is 18bit but ST7789V accepts these as 24bit values, ignoring the 2 least significant bits per byte.
+// FC is 0b1111110, 7C is 01111100 (half of FC)
+#define COLOR_BLACK 0x000000
+#define COLOR_RED 0xFC0000
+#define COLOR_ROSE 0xFC007C
+#define COLOR_MAGENTA 0xFC00FC
+#define COLOR_VIOLET 0x7C00FC
+#define COLOR_BLUE 0x0000FC
+#define COLOR_AZURE 0x007CFC
+#define COLOR_CYAN 0x00FCFC
+#define COLOR_SPRING_GREEN 0x00FC7C
+#define COLOR_GREEN 0x00FC00
+#define COLOR_CHARTREUSE 0x7CFC00
+#define COLOR_YELLOW 0xFCFC00
+#define COLOR_ORANGE 0xFC7C00
+#define COLOR_WHITE 0xFCFCFC
+#define COLOR_GRAY 0x7C7C7C
+#define COLOR_LIGHTGRAY 0x2F2F2F
+#define COLOR_DARKGRAY 0x101010
 
-#define RGBto444(r, g, b) \
-  ((((r) & 0xF) << 8) | (((g) & 0xF) << 4) | ((b & 0xF)))
-
-class ST7789v_arduino {
+class ST7789V : public Adafruit_GFX {
 
  public:
-  ST7789v_arduino(int8_t DC, int8_t RST, int8_t CS = -1);
+  ST7789V(int8_t DC, int8_t CS);
 
-  void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1),
-      pushColor(uint16_t color), fillScreen(uint16_t color),
-      drawPixel(int16_t x, int16_t y, uint16_t color),
-      drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color),
-      drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color),
-      fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color),
+  void setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+  void writeAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h),
+      writeColor(uint32_t color),
+      writeColor(uint8_t r6, uint8_t g6, uint8_t b6),
+      fillScreen(uint32_t color),
+      drawPixel(int16_t x, int16_t y, uint32_t color),
+      drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color),
+      drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color),
+      fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color),
       invertDisplay(boolean i), init(uint16_t width, uint16_t height);
-  uint16_t Color444(uint8_t r, uint8_t g, uint8_t b);
+  uint32_t ditherColor(uint8_t r, uint8_t g, uint8_t b);
 
-  uint16_t color444(uint8_t r, uint8_t g, uint8_t b) {
-    return Color444(r, g, b);
-  }
+  void drawImage(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t* img);
 
-  void drawImage(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t* img);
-  void drawImageF(int16_t x, int16_t y, int16_t w, int16_t h,
-                  const uint16_t* img16);
-
-  void drawImageF(int16_t x, int16_t y, const uint16_t* img16) {
-    drawImageF(x, y, pgm_read_word(img16), pgm_read_word(img16 + 1), img16 + 3);
-  }
+  void startWrite(void);
+  void writePixel(int16_t x, int16_t y, uint32_t color);
+  void writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h,
+                     uint32_t color);
+  void writeFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
+  void writeFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  // void writeLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
+  // uint32_t color);
+  void endWrite(void);
 
   void partialDisplay(boolean mode);
   void sleepDisplay(boolean mode);
@@ -117,27 +117,18 @@ class ST7789v_arduino {
   void setPartArea(uint16_t sr, uint16_t er);
   void setBrightness(uint8_t br);
   void powerSave(uint8_t mode);
-  void startWrite();
-  void endWrite();
 
   void rgbWheel(int idx, uint8_t* _r, uint8_t* _g, uint8_t* _b);
-  uint16_t rgbWheel(int idx);
+  uint32_t rgbWheel(int idx);
 
- protected:
-  uint8_t _colstart, _rowstart, _xstart,
-      _ystart;  // some displays need this changed
-
-  void displayInit(const uint8_t* addr);
-  void spiwrite(uint8_t), spiwrite12(uint16_t), writecommand(uint8_t c),
-      writedata(uint8_t d), commonInit(const uint8_t* cmdList);
+  void displayInit(const uint8_t* addr), spiwrite(uint8_t),
+      transfer24(uint32_t), writecommand(uint8_t c), writedata(uint8_t d);
 
  private:
   inline void CS_HIGH(void);
   inline void CS_LOW(void);
   inline void DC_HIGH(void);
   inline void DC_LOW(void);
-
-  boolean _DCbit;
 
   uint16_t _width, _height;
 

@@ -9,11 +9,11 @@
 #include "clock.h"
 #include "endpoints/endpoints.h"
 #include "motor.h"
-#include "thirdparty/ST7789v_arduino.h"
+#include "thirdparty/ST7789V.h"
 
 static const char* TAG = "webserver";
 
-int Webserver::setup(Alarms* alarms, Motor* motor, ST7789v_arduino* tft) {
+int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft) {
   // TODO
   assert(MDNS.begin(DEFAULT_HOSTNAME));
   assert(MDNS.addService("http", "tcp", 80));

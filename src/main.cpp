@@ -1,7 +1,7 @@
 #include <SPI.h>
 #include <pins.h>
-#include <thirdparty/ST7789v_arduino.h>  // or Adafruit_ILI9341.h
-#include <thirdparty/XPT2046_Calibrated.h>
+#include <thirdparty/ST7789V.h>  // or Adafruit_ILI9341.h
+#include <thirdparty/XPT2046.h>
 #include "./alarm.h"
 #include "./pins.h"
 #include "./preferences.h"
@@ -13,11 +13,7 @@
 #include "clock.h"
 #include "esp32-hal-gpio.h"
 #include "motor.h"
-#include "thirdparty/ST7789v_arduino.h"
-#include "thirdparty/XPT2046_Calibrated.h"
 #include "utils.h"
-
-// -- CONFIGURATION --
 
 static uint16_t const SCREEN_WIDTH = 320;
 static uint16_t const SCREEN_HEIGHT = 240;
@@ -33,9 +29,9 @@ static TS_Point _screenPoint[] = {
 
 // touchscreen points used for calibration verification
 static TS_Point _touchPoint[] = {
-    TS_Point(3795, 3735),  // point A
-    TS_Point(482, 2200),   // point B
-    TS_Point(2084, 583),   // point C
+    TS_Point(3530, 3465),  // point A
+    TS_Point(381, 2275),   // point B
+    TS_Point(2015, 710),   // point C
 };
 
 static TS_Calibration cal(_screenPoint[(int)PointID::A],
@@ -55,59 +51,50 @@ Alarms alarms;
 Webserver webserver;
 Motor motor;
 
-XPT2046_Calibrated ts(TOUCH_CS);
-
-ST7789v_arduino tft = ST7789v_arduino(TFT_DC, -1, TFT_CS);
-
-// -----------------------------------------------------------------------------
-
-// -- UTILITY ROUTINES (DECLARATION) --
+XPT2046 ts(TOUCH_CS);
+ST7789V tft = ST7789V(TFT_DC, TFT_CS);
 
 inline bool touched();
-void crosshair(TS_Point p);
+void crosshair(TS_Point p, uint32_t color = COLOR_WHITE);
 uint16_t distance(TS_Point a, TS_Point b);
 void drawMapping(PointID n, TS_Point p);
 void updateScreenEdges(TS_Point p);
 PointID nearestScreenPoint(TS_Point touch);
 
-// -- ARDUINO MAIN --
-
 void setup() {
   Serial.begin(115200);
   while (!Serial) {}
-  // assert(Wire.begin());
   Serial.setDebugOutput(true);
 
   esp_log_level_set("*", ESP_LOG_DEBUG);
 
-  // I2C Address Scanner
-  // int devices = 0;
-  // for (int addr = 1; addr < 127; addr++) {
-  //   char msg[20];
-  //   sprintf(msg, "scanning %02X", addr);
-  //   Serial.println(msg);
-  //   int8_t error = 0;
-  //   Wire.beginTransmission(addr);
-  //   error = Wire.endTransmission();
-  //   if (error == 0) {
-  //     char msg[20];
-  //     sprintf(msg, "at %02X", addr);
-  //     Serial.println(msg);
-  //     devices++;
-  //   } else {
-  //     char msg[20];
-  //     sprintf(msg, "error: %d", error);
-  //     Serial.println(msg);
-  //   }
-  // }
-  // char msg[20];
-  // sprintf(msg, "%d found", devices);
-  // Serial.println(msg);
-
   tft.init(320, 240);
-  tft.fillScreen(BLACK);
-  // tft.setTextSize(1);
-  // tft.setTextColor(ILI9341_WHITE);
+  tft.fillScreen(COLOR_DARKGRAY);
+
+  // tft.startWrite();
+  //
+  // for (int y = 0; y < SCREEN_HEIGHT; y++) {
+  //   for (int x = 0; x < SCREEN_WIDTH; x++) {
+  //     auto r = double(x) / (SCREEN_WIDTH - 1);
+  //     auto g = double(y) / (SCREEN_HEIGHT - 1);
+  //     auto b = double(x) / double(y);
+  //
+  //     char ir = char(63.999 * r);
+  //     char ig = char(63.999 * g);
+  //     char ib = char(63.999 * b);
+  //
+  //     // tft.pushColor(ir, ig, ib);
+  //     tft.writePixel(x, y, tft.ditherColor(ir, ig, ib));
+  //   }
+  //   Serial.printf("y: %d\n", y);
+  // }
+  //
+  // tft.endWrite();
+
+  // tft.drawCircle(80 - 1, 30 - 1, 25, COLOR_ORANGE);
+
+  tft.setTextSize(1);
+  tft.setTextColor(COLOR_WHITE);
 
   assert(ts.begin());
   ts.calibrate(cal);
@@ -116,6 +103,14 @@ void setup() {
   for (int i = 0; i < sizeof(_screenPoint) / sizeof(_screenPoint[0]); i++) {
     crosshair(_screenPoint[i]);
   }
+
+  crosshair(TS_Point(0, 0), COLOR_RED);
+  crosshair(TS_Point(320 - 1, 240 - 1), COLOR_RED);
+
+  crosshair(TS_Point(320 - 1, 0), COLOR_GREEN);
+  crosshair(TS_Point(0, 240 - 1), COLOR_GREEN);
+
+  crosshair(TS_Point(160 - 1, 120 - 1), COLOR_BLUE);
 
   // pinMode(LED_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
@@ -134,7 +129,7 @@ void setup() {
   rtc.setup();
   alarms.setup();
   motor.setup();
-  // assert(preferences.save_into_fs() == 0);
+  assert(preferences.save_into_fs() == 0);
 
   if (WiFi.status() == WL_CONNECTED) {
     assert(webserver.setup(&alarms, &motor, &tft) == 0);
@@ -213,17 +208,19 @@ void loop() {
   }
 
   static long touched_tk;
-  if (bounce(&touched_tk, 200) && touched()) {
+  if (bounce(&touched_tk, 10) && touched()) {
 
     TS_Point p = ts.getPoint();
 
-    //updateScreenEdges(p);
+    // updateScreenEdges(p);
 
     // determine which screen point is closest to this touch event
     PointID n = nearestScreenPoint(p);
 
+    tft.drawPixel(p.x, p.y, random());
+
     // update the corresponding line mapping
-    drawMapping(n, p);
+    // drawMapping(n, p);
   }
 }
 
@@ -233,10 +230,10 @@ inline bool touched() {
   return ts.touched();
 }
 
-void crosshair(TS_Point p) {
-  tft.fillRect(p.x, p.y, 4, 4, WHITE);
-  tft.drawFastHLine(p.x - 4, p.y, 9, WHITE);
-  tft.drawFastVLine(p.x, p.y - 4, 9, WHITE);
+void crosshair(TS_Point p, uint32_t color) {
+  tft.fillRect(p.x - 2, p.y - 2, 5, 5, color);
+  tft.drawFastHLine(p.x - 4, p.y, 9, color);
+  tft.drawFastVLine(p.x, p.y - 4, 9, color);
 }
 
 uint16_t distance(TS_Point a, TS_Point b) {
@@ -285,7 +282,7 @@ void drawMapping(PointID n, TS_Point tp) {
   // tft.drawFastHLine(0, tp.y, 240, GREEN);
   // tft.drawFastVLine(tp.x, 0, 320, GREEN);
   // tft.drawPixel(tp.x, tp.y, WHITE);
-  // tft.fillRect(tp.x, tp.y, 4, 4, WHITE);
+  tft.fillRect((tp.x - 1) % 320, (tp.y - 1) % 240, 3, 3, COLOR_ROSE);
 
   // draw the current line
   // tft.setCursor(posLeft, posTop);

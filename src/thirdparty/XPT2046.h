@@ -20,14 +20,10 @@
  * THE SOFTWARE.
  */
 
-#ifndef _XPT2046_Calibrated_h_
-#define _XPT2046_Calibrated_h_
+#ifndef _XPT2046_h_
+#define _XPT2046_h_
 
 #include <SPI.h>
-
-#if ARDUINO < 10600
-#error "Arduino 1.6.0 or later (SPI library) is required"
-#endif
 
 class TS_Point {
  public:
@@ -82,9 +78,9 @@ class TS_Calibration {
   float alphaX, betaX, alphaY, betaY;
 };
 
-class XPT2046_Calibrated {
+class XPT2046 {
  public:
-  constexpr XPT2046_Calibrated(uint8_t cspin, uint8_t tirq = 255)
+  constexpr XPT2046(uint8_t cspin, uint8_t tirq = 255)
       : csPin(cspin), tirqPin(tirq) {}
 
   bool begin();
@@ -103,6 +99,7 @@ class XPT2046_Calibrated {
 
  private:
   void update();
+  void sample(char data[8]);
   uint8_t csPin, tirqPin = 1;
   int16_t xraw = 0, yraw = 0, zraw = 0;
   uint32_t msraw = 0x80000000;

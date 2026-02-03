@@ -21,7 +21,7 @@
         assumes 5v power source for rpm calc
 */
 
-#include "./stepper.h"
+#include "./ULN2003.h"
 #include "Arduino.h"
 
 CheapStepper::CheapStepper() : pins({8, 9, 10, 11}) {
@@ -37,7 +37,9 @@ CheapStepper::CheapStepper(int in1, int in2, int in3, int in4)
   }
 }
 
-void CheapStepper::setRpm(int rpm) { delay = calcDelay(rpm); }
+void CheapStepper::setRpm(int rpm) {
+  delay = calcDelay(rpm);
+}
 
 void CheapStepper::move(bool clockwise, int numSteps) {
 
@@ -53,9 +55,9 @@ void CheapStepper::moveTo(bool clockwise, int toStep) {
     toStep %= totalSteps;
   else if (toStep < 0) {
     toStep %=
-        totalSteps; // returns negative if toStep not multiple of totalSteps
+        totalSteps;  // returns negative if toStep not multiple of totalSteps
     if (toStep < 0)
-      toStep += totalSteps; // shift into 0-(totalSteps-1) range
+      toStep += totalSteps;  // shift into 0-(totalSteps-1) range
   }
   while (stepN != toStep) {
     step(clockwise);
@@ -74,9 +76,9 @@ void CheapStepper::moveToDegree(bool clockwise, int deg) {
   if (deg >= 360)
     deg %= 360;
   else if (deg < 0) {
-    deg %= 360; // returns negative if deg not multiple of 360
+    deg %= 360;  // returns negative if deg not multiple of 360
     if (deg < 0)
-      deg += 360; // shift into 0-359 range
+      deg += 360;  // shift into 0-359 range
   }
 
   int toStep = deg * totalSteps / 360;
@@ -105,9 +107,9 @@ void CheapStepper::newMoveTo(bool clockwise, int toStep) {
     toStep %= totalSteps;
   else if (toStep < 0) {
     toStep %=
-        totalSteps; // returns negative if toStep not multiple of totalSteps
+        totalSteps;  // returns negative if toStep not multiple of totalSteps
     if (toStep < 0)
-      toStep += totalSteps; // shift into 0-(totalSteps-1) range
+      toStep += totalSteps;  // shift into 0-(totalSteps-1) range
   }
 
   if (clockwise)
@@ -132,9 +134,9 @@ void CheapStepper::newMoveToDegree(bool clockwise, int deg) {
   if (deg >= 360)
     deg %= 360;
   else if (deg < 0) {
-    deg %= 360; // returns negative if deg not multiple of 360
+    deg %= 360;  // returns negative if deg not multiple of 360
     if (deg < 0)
-      deg += 360; // shift into 0-359 range
+      deg += 360;  // shift into 0-359 range
   }
 
   int toStep = deg * totalSteps / 360;
@@ -143,11 +145,11 @@ void CheapStepper::newMoveToDegree(bool clockwise, int deg) {
 
 void CheapStepper::run() {
 
-  if (micros() - lastStepTime >= delay) { // if time for step
-    if (stepsLeft > 0) {                  // clockwise
+  if (micros() - lastStepTime >= delay) {  // if time for step
+    if (stepsLeft > 0) {                   // clockwise
       stepCW();
       stepsLeft--;
-    } else if (stepsLeft < 0) { // counter-clockwise
+    } else if (stepsLeft < 0) {  // counter-clockwise
       stepCCW();
       stepsLeft++;
     }
@@ -156,7 +158,9 @@ void CheapStepper::run() {
   }
 }
 
-void CheapStepper::stop() { stepsLeft = 0; }
+void CheapStepper::stop() {
+  stepsLeft = 0;
+}
 
 void CheapStepper::step(bool clockwise) {
 
@@ -178,9 +182,9 @@ void CheapStepper::off() {
 int CheapStepper::calcDelay(int rpm) {
 
   if (rpm < 6)
-    return delay; // will overheat, no change
+    return delay;  // will overheat, no change
   else if (rpm >= 24)
-    return 600; // highest speed
+    return 600;  // highest speed
 
   unsigned long d = 60000000 / (totalSteps * (unsigned long)rpm);
   // in range: 600-1465 microseconds (24-1 rpm)
@@ -196,24 +200,24 @@ int CheapStepper::calcRpm(int _delay) {
 void CheapStepper::seqCW() {
   seqN++;
   if (seqN > 7)
-    seqN = 0; // roll over to A seq
+    seqN = 0;  // roll over to A seq
   seq(seqN);
 
-  stepN++; // track miniSteps
+  stepN++;  // track miniSteps
   if (stepN >= totalSteps) {
-    stepN -= totalSteps; // keep stepN within 0-(totalSteps-1)
+    stepN -= totalSteps;  // keep stepN within 0-(totalSteps-1)
   }
 }
 
 void CheapStepper::seqCCW() {
   seqN--;
   if (seqN < 0)
-    seqN = 7; // roll over to DA seq
+    seqN = 7;  // roll over to DA seq
   seq(seqN);
 
-  stepN--; // track miniSteps
+  stepN--;  // track miniSteps
   if (stepN < 0) {
-    stepN += totalSteps; // keep stepN within 0-(totalSteps-1)
+    stepN += totalSteps;  // keep stepN within 0-(totalSteps-1)
   }
 }
 
@@ -223,69 +227,69 @@ void CheapStepper::seq(int seqNum) {
   // A,B,C,D HIGH/LOW pattern to write to driver board
 
   switch (seqNum) {
-  case 0: {
-    pattern[0] = 1;
-    pattern[1] = 0;
-    pattern[2] = 0;
-    pattern[3] = 0;
-    break;
-  }
-  case 1: {
-    pattern[0] = 1;
-    pattern[1] = 1;
-    pattern[2] = 0;
-    pattern[3] = 0;
-    break;
-  }
-  case 2: {
-    pattern[0] = 0;
-    pattern[1] = 1;
-    pattern[2] = 0;
-    pattern[3] = 0;
-    break;
-  }
-  case 3: {
-    pattern[0] = 0;
-    pattern[1] = 1;
-    pattern[2] = 1;
-    pattern[3] = 0;
-    break;
-  }
-  case 4: {
-    pattern[0] = 0;
-    pattern[1] = 0;
-    pattern[2] = 1;
-    pattern[3] = 0;
-    break;
-  }
-  case 5: {
-    pattern[0] = 0;
-    pattern[1] = 0;
-    pattern[2] = 1;
-    pattern[3] = 1;
-    break;
-  }
-  case 6: {
-    pattern[0] = 0;
-    pattern[1] = 0;
-    pattern[2] = 0;
-    pattern[3] = 1;
-    break;
-  }
-  case 7: {
-    pattern[0] = 1;
-    pattern[1] = 0;
-    pattern[2] = 0;
-    pattern[3] = 1;
-    break;
-  }
-  default: {
-    pattern[0] = 0;
-    pattern[1] = 0;
-    pattern[2] = 0;
-    pattern[3] = 0;
-    break;
-  }
+    case 0: {
+      pattern[0] = 1;
+      pattern[1] = 0;
+      pattern[2] = 0;
+      pattern[3] = 0;
+      break;
+    }
+    case 1: {
+      pattern[0] = 1;
+      pattern[1] = 1;
+      pattern[2] = 0;
+      pattern[3] = 0;
+      break;
+    }
+    case 2: {
+      pattern[0] = 0;
+      pattern[1] = 1;
+      pattern[2] = 0;
+      pattern[3] = 0;
+      break;
+    }
+    case 3: {
+      pattern[0] = 0;
+      pattern[1] = 1;
+      pattern[2] = 1;
+      pattern[3] = 0;
+      break;
+    }
+    case 4: {
+      pattern[0] = 0;
+      pattern[1] = 0;
+      pattern[2] = 1;
+      pattern[3] = 0;
+      break;
+    }
+    case 5: {
+      pattern[0] = 0;
+      pattern[1] = 0;
+      pattern[2] = 1;
+      pattern[3] = 1;
+      break;
+    }
+    case 6: {
+      pattern[0] = 0;
+      pattern[1] = 0;
+      pattern[2] = 0;
+      pattern[3] = 1;
+      break;
+    }
+    case 7: {
+      pattern[0] = 1;
+      pattern[1] = 0;
+      pattern[2] = 0;
+      pattern[3] = 1;
+      break;
+    }
+    default: {
+      pattern[0] = 0;
+      pattern[1] = 0;
+      pattern[2] = 0;
+      pattern[3] = 0;
+      break;
+    }
   }
 
   // write pattern to pins

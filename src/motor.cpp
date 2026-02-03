@@ -1,7 +1,7 @@
 #include "motor.h"
 #include "LittleFS.h"
 #include "pins.h"
-#include "thirdparty/stepper.h"
+#include "thirdparty/ULN2003.h"
 #include "utils.h"
 
 static const char* TAG = "motor";

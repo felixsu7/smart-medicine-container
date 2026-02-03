@@ -20,18 +20,18 @@
  * THE SOFTWARE.
  */
 
-#include "XPT2046_Calibrated.h"
+#include "XPT2046.h"
 #include <Arduino.h>
 
-#define Z_THRESHOLD 550
+#define Z_THRESHOLD 125
 #define Z_THRESHOLD_INT 75
 #define MSEC_THRESHOLD 10
 #define SPI_SETTING SPISettings(1000000, MSBFIRST, SPI_MODE0)
 
-static XPT2046_Calibrated* isrPinptr;
+static XPT2046* isrPinptr;
 void isrPin(void);
 
-bool XPT2046_Calibrated::begin() {
+bool XPT2046::begin() {
   SPI.begin();
   pinMode(csPin, OUTPUT);
   digitalWrite(csPin, HIGH);
@@ -45,32 +45,32 @@ bool XPT2046_Calibrated::begin() {
 
 ISR_PREFIX
 void isrPin(void) {
-  XPT2046_Calibrated* o = isrPinptr;
+  XPT2046* o = isrPinptr;
   o->isrWake = true;
 }
 
-TS_Point XPT2046_Calibrated::getPoint() {
+TS_Point XPT2046::getPoint() {
   update();
   return TS_Point(xraw, yraw, zraw);
 }
 
-bool XPT2046_Calibrated::tirqTouched() {
+bool XPT2046::tirqTouched() {
   return (isrWake);
 }
 
-bool XPT2046_Calibrated::touched() {
+bool XPT2046::touched() {
   update();
   return (zraw >= Z_THRESHOLD);
 }
 
-void XPT2046_Calibrated::readData(uint16_t* x, uint16_t* y, uint8_t* z) {
+void XPT2046::readData(uint16_t* x, uint16_t* y, uint8_t* z) {
   update();
   *x = xraw;
   *y = yraw;
   *z = zraw;
 }
 
-bool XPT2046_Calibrated::bufferEmpty() {
+bool XPT2046::bufferEmpty() {
   return ((millis() - msraw) < MSEC_THRESHOLD);
 }
 
@@ -101,10 +101,12 @@ static int16_t besttwoavg(int16_t x, int16_t y, int16_t z) {
   return (reta);
 }
 
+void XPT2046::sample(char data[8]) {}
+
 // TODO: perhaps a future version should offer an option for more oversampling,
 //       with the RANSAC algorithm https://en.wikipedia.org/wiki/RANSAC
 
-void XPT2046_Calibrated::update() {
+void XPT2046::update() {
   int16_t data[6];
 
   if (!isrWake)
@@ -118,7 +120,6 @@ void XPT2046_Calibrated::update() {
   SPI.transfer(0xB1 /* Z1 */);
   int16_t z1 = SPI.transfer16(0xC1 /* Z2 */) >> 3;
   int z = z1 + 4095;
-  // TODO FIXME not properly reading
   int16_t z2 = SPI.transfer16(0x91 /* X */) >> 3;
   z -= z2;
   if (z >= Z_THRESHOLD) {
@@ -130,6 +131,7 @@ void XPT2046_Calibrated::update() {
 
     // ESP_LOGD("touch", "spi transferred: %04X %04X %04X %04X", data[0], data[1],
     // data[2], data[3]);
+
   } else
     data[0] = data[1] = data[2] = data[3] =
         0;  // Compiler warns these values may be used unset on early exit.
