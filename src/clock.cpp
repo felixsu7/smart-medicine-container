@@ -1,5 +1,5 @@
 #include "./clock.h"
-#include <uRTCLib.h>
+#include <thirdparty/uRTCLib.h>
 #include "./config.h"
 #include "WiFi.h"
 

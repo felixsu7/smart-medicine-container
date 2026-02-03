@@ -1,7 +1,7 @@
 #ifndef CLOCK_H
 #define CLOCK_H
 
-#include <uRTCLib.h>
+#include <thirdparty/uRTCLib.h>
 #include <ctime>
 
 class Clock {
