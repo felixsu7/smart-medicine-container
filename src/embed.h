@@ -1,58 +1,93 @@
 #ifndef EMBEDDED_FILES_H
 #define EMBEDDED_FILES_H
-static const char* EMBED_INDEX_HTML_DATA = "<!DOCTYPE HTML>\n\
+static const char* EMBED_INDEX_HTML_DATA = "<!DOCTYPE html>\n\
 <html lang=\"en\">\n\
 \n\
 <head>\n\
-	<meta charset=\"utf-8\">\n\
-	<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
-	<meta name=\"color-scheme\" content=\"light dark\">\n\
-	<script>; (function () {\n\
-			var src = '//cdn.jsdelivr.net/npm/eruda';\n\
-			if (!/eruda=true/.test(window.location) && localStorage.getItem('active-eruda') != 'true') return;\n\
-			document.write('<scr' + 'ipt src=\"' + src + '\"></scr' + 'ipt>');\n\
-			document.write('<scr' + 'ipt>eruda.init();</scr' + 'ipt>');\n\
-		})();</script>\n\
+	<meta charset=\"utf-8\" />\n\
+	<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n\
+	<meta name=\"color-scheme\" content=\"light dark\" />\n\
+	<script>\n\
+		(function () {\n\
+			var src = \"//cdn.jsdelivr.net/npm/eruda\";\n\
+			if (\n\
+				!/eruda=true/.test(window.location) &&\n\
+				localStorage.getItem(\"active-eruda\") != \"true\"\n\
+			)\n\
+				return;\n\
+			document.write(\"<scr\" + 'ipt src=\"' + src + '\"></scr' + \"ipt>\");\n\
+			document.write(\"<scr\" + \"ipt>eruda.init();</scr\" + \"ipt>\");\n\
+		})();\n\
+	</script>\n\
 	<script src=\"/htmx.js\"></script>\n\
-	<link rel=\"stylesheet\" href=\"/pico.css\">\n\
+	<link rel=\"stylesheet\" href=\"/pico.css\" />\n\
 	<title>Hello world!</title>\n\
 </head>\n\
 \n\
 <body>\n\
+	<nav>\n\
+		<article><strong>Smart Medicine Container</strong></article>\n\
+		<div hx-get=\"/attend_head_htmx\" hx-trigger=\"every 1s\">\n\
+			<button hx-post=\"/attend\" hx-vals='{\"idx\":\"1\"}'>Attend test</button>\n\
+		</div>\n\
+	</nav>\n\
 	<main class=\"container\">\n\
-		<h1>Testing</h1>\n\
-		<br />\n\
-		<h2>One-off test</h2>\n\
-		<form hx-post=\"/oneoff\" hx-swap=\"none\">\n\
-			<input name=\"second\" type=\"number\" placeholder=\"Second\">\n\
-			<input type=\"submit\" value=\"Set off\">\n\
-		</form>\n\
-		<br />\n\
 		<h2>Spinning test</h2>\n\
-		<form hx-post=\"/spin\" hx-swap=\"none\">\n\
-			<input name=\"compartment\" type=\"number\" min=\"1\" max=\"8\" placeholder=\"Compartment\">\n\
-			<input type=\"submit\" value=\"Spin\">\n\
+		<div role=\"group\">\n\
+			<button hx-post=\"/spin\" hx-vals='{\"compartment\": \"1\"}' type=\"submit\" value=\"Spin\">\n\
+				1\n\
+			</button>\n\
+			<button hx-post=\"/spin\" hx-vals='{\"compartment\": \"2\"}' type=\"submit\" value=\"Spin\">\n\
+				2\n\
+			</button>\n\
+			<button hx-post=\"/spin\" hx-vals='{\"compartment\": \"3\"}' type=\"submit\" value=\"Spin\">\n\
+				3\n\
+			</button>\n\
+			<button hx-post=\"/spin\" hx-vals='{\"compartment\": \"4\"}' type=\"submit\" value=\"Spin\">\n\
+				4\n\
+			</button>\n\
+			<button hx-post=\"/spin\" hx-vals='{\"compartment\": \"5\"}' type=\"submit\" value=\"Spin\">\n\
+				5\n\
+			</button>\n\
+			<button hx-post=\"/spin\" hx-vals='{\"compartment\": \"6\"}' type=\"submit\" value=\"Spin\">\n\
+				6\n\
+			</button>\n\
+			<button hx-post=\"/spin\" hx-vals='{\"compartment\": \"7\"}' type=\"submit\" value=\"Spin\">\n\
+				7\n\
+			</button>\n\
+			<button hx-post=\"/spin\" hx-vals='{\"compartment\": \"8\"}' type=\"submit\" value=\"Spin\">\n\
+				8\n\
+			</button>\n\
+		</div>\n\
+		<div role=\"group\">\n\
+			<article hx-get=\"/compartment_pos_htmx\" hx-trigger=\"every 1s\">1</article>\n\
+			<progress hx-get=\"/motor_pos_htmx\" hx-trigger=\"every 1s\" hx-swap=\"outerHTML\" value=\"50\" max=\"100\" />\n\
+		</div>\n\
+		<br />\n\
+\n\
+		<h2>One-off test</h2>\n\
+		<form hx-post=\"/oneoff\" hx-swap=\"none\" role=\"group\">\n\
+			<input name=\"second\" type=\"number\" placeholder=\"Second\" />\n\
+			<input type=\"submit\" value=\"Set off\" />\n\
 		</form>\n\
 		<br />\n\
+\n\
 		<h2>Rect Test</h2>\n\
-		<form hx-post=\"/recttest\" hx-swap=\"none\">\n\
-			<input name=\"x\" type=\"number\" placeholder=\"X Pos\">\n\
-			<input name=\"y\" type=\"number\" placeholder=\"Y Pos\">\n\
-			<input name=\"w\" type=\"number\" placeholder=\"Width\">\n\
-			<input name=\"h\" type=\"number\" placeholder=\"Height\">\n\
-			<input name=\"c\" type=\"number\" placeholder=\"Color\">\n\
-			<input type=\"submit\" value=\"Draw Rectangle\">\n\
+		<form hx-post=\"/recttest\" hx-swap=\"none\" role=\"group\">\n\
+			<input name=\"x\" type=\"number\" placeholder=\"X Pos\" />\n\
+			<input name=\"y\" type=\"number\" placeholder=\"Y Pos\" />\n\
+			<input name=\"w\" type=\"number\" placeholder=\"Width\" />\n\
+			<input name=\"h\" type=\"number\" placeholder=\"Height\" />\n\
+			<input name=\"c\" type=\"number\" placeholder=\"Color\" />\n\
+			<input type=\"submit\" value=\"Draw Rectangle\" />\n\
 		</form>\n\
 		<br />\n\
+\n\
 		<h2>Fill Test</h2>\n\
-		<form hx-post=\"/filltest\" hx-swap=\"none\">\n\
-			<input name=\"c\" type=\"number\" placeholder=\"Color\">\n\
-			<input type=\"submit\" value=\"Fill Screen\">\n\
+		<form hx-post=\"/filltest\" hx-swap=\"none\" role=\"group\">\n\
+			<input name=\"c\" type=\"number\" placeholder=\"Color\" />\n\
+			<input type=\"submit\" value=\"Fill Screen\" />\n\
 		</form>\n\
-		<br />\n\
-		<h2>Motor Position</h2>\n\
-		<p hx-get=\"/motor_pos\" hx-trigger=\"every 1s\"></p>\n\
-		<br />\n\
 		<h2>Alarms</h2>\n\
 		<div hx-get=\"/alarms\" hx-target=\"#alarms-data\" hx-trigger=\"every 1s\">\n\
 			<table>\n\

@@ -1,56 +1,91 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="color-scheme" content="light dark">
-	<script>; (function () {
-			var src = '//cdn.jsdelivr.net/npm/eruda';
-			if (!/eruda=true/.test(window.location) && localStorage.getItem('active-eruda') != 'true') return;
-			document.write('<scr' + 'ipt src="' + src + '"></scr' + 'ipt>');
-			document.write('<scr' + 'ipt>eruda.init();</scr' + 'ipt>');
-		})();</script>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="color-scheme" content="light dark" />
+	<script>
+		(function () {
+			var src = "//cdn.jsdelivr.net/npm/eruda";
+			if (
+				!/eruda=true/.test(window.location) &&
+				localStorage.getItem("active-eruda") != "true"
+			)
+				return;
+			document.write("<scr" + 'ipt src="' + src + '"></scr' + "ipt>");
+			document.write("<scr" + "ipt>eruda.init();</scr" + "ipt>");
+		})();
+	</script>
 	<script src="/htmx.js"></script>
-	<link rel="stylesheet" href="/pico.css">
+	<link rel="stylesheet" href="/pico.css" />
 	<title>Hello world!</title>
 </head>
 
 <body>
+	<nav>
+		<article><strong>Smart Medicine Container</strong></article>
+		<div hx-get="/attend_head_htmx" hx-trigger="every 1s">
+			<button hx-post="/attend" hx-vals='{"idx":"1"}'>Attend test</button>
+		</div>
+	</nav>
 	<main class="container">
-		<h1>Testing</h1>
-		<br />
-		<h2>One-off test</h2>
-		<form hx-post="/oneoff" hx-swap="none">
-			<input name="second" type="number" placeholder="Second">
-			<input type="submit" value="Set off">
-		</form>
-		<br />
 		<h2>Spinning test</h2>
-		<form hx-post="/spin" hx-swap="none">
-			<input name="compartment" type="number" min="1" max="8" placeholder="Compartment">
-			<input type="submit" value="Spin">
+		<div role="group">
+			<button hx-post="/spin" hx-vals='{"compartment": "1"}' type="submit" value="Spin">
+				1
+			</button>
+			<button hx-post="/spin" hx-vals='{"compartment": "2"}' type="submit" value="Spin">
+				2
+			</button>
+			<button hx-post="/spin" hx-vals='{"compartment": "3"}' type="submit" value="Spin">
+				3
+			</button>
+			<button hx-post="/spin" hx-vals='{"compartment": "4"}' type="submit" value="Spin">
+				4
+			</button>
+			<button hx-post="/spin" hx-vals='{"compartment": "5"}' type="submit" value="Spin">
+				5
+			</button>
+			<button hx-post="/spin" hx-vals='{"compartment": "6"}' type="submit" value="Spin">
+				6
+			</button>
+			<button hx-post="/spin" hx-vals='{"compartment": "7"}' type="submit" value="Spin">
+				7
+			</button>
+			<button hx-post="/spin" hx-vals='{"compartment": "8"}' type="submit" value="Spin">
+				8
+			</button>
+		</div>
+		<div role="group">
+			<article hx-get="/compartment_pos_htmx" hx-trigger="every 1s">1</article>
+			<progress hx-get="/motor_pos_htmx" hx-trigger="every 1s" hx-swap="outerHTML" value="50" max="100" />
+		</div>
+		<br />
+
+		<h2>One-off test</h2>
+		<form hx-post="/oneoff" hx-swap="none" role="group">
+			<input name="second" type="number" placeholder="Second" />
+			<input type="submit" value="Set off" />
 		</form>
 		<br />
+
 		<h2>Rect Test</h2>
-		<form hx-post="/recttest" hx-swap="none">
-			<input name="x" type="number" placeholder="X Pos">
-			<input name="y" type="number" placeholder="Y Pos">
-			<input name="w" type="number" placeholder="Width">
-			<input name="h" type="number" placeholder="Height">
-			<input name="c" type="number" placeholder="Color">
-			<input type="submit" value="Draw Rectangle">
+		<form hx-post="/recttest" hx-swap="none" role="group">
+			<input name="x" type="number" placeholder="X Pos" />
+			<input name="y" type="number" placeholder="Y Pos" />
+			<input name="w" type="number" placeholder="Width" />
+			<input name="h" type="number" placeholder="Height" />
+			<input name="c" type="number" placeholder="Color" />
+			<input type="submit" value="Draw Rectangle" />
 		</form>
 		<br />
+
 		<h2>Fill Test</h2>
-		<form hx-post="/filltest" hx-swap="none">
-			<input name="c" type="number" placeholder="Color">
-			<input type="submit" value="Fill Screen">
+		<form hx-post="/filltest" hx-swap="none" role="group">
+			<input name="c" type="number" placeholder="Color" />
+			<input type="submit" value="Fill Screen" />
 		</form>
-		<br />
-		<h2>Motor Position</h2>
-		<p hx-get="/motor_pos" hx-trigger="every 1s"></p>
-		<br />
 		<h2>Alarms</h2>
 		<div hx-get="/alarms" hx-target="#alarms-data" hx-trigger="every 1s">
 			<table>

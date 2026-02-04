@@ -115,6 +115,10 @@ int Motor::steps(void) {
   return current_step;
 }
 
+int Motor::compartment(void) {
+  return 1 + (current_step / STEPS_PER_COMPARTMENT);
+}
+
 int Motor::calibrate(int steps) {
   current_step = 0;
   old_step_pos = 0;

@@ -296,10 +296,45 @@ int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft) {
     return res->send(reply);
   });
 
-  server.on("/motor_pos", HTTP_GET,
+  server.on("/motor_pos_htmx", HTTP_GET,
             [=](PsychicRequest* req, PsychicResponse* res) {
-              char buf[20];
-              snprintf(buf, sizeof(buf), "%d", motor->steps());
+              char buf[150];
+              snprintf(
+                  buf, sizeof(buf),
+                  "<progress hx-post=\"/motor_pos_htmx\" hx-trigger=\"every "
+                  "1s\" hx-swap=\"outerHTML\" value=\"%d\" max=\"4096\" />",
+                  motor->steps());
+              return res->send(buf);
+            });
+
+  server.on("/compartment_pos_htmx", HTTP_GET,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              char buf[10];
+              snprintf(buf, sizeof(buf), "%d", motor->compartment());
+              return res->send(buf);
+            });
+
+  server.on("/attend_head_htmx", HTTP_GET,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              if (alarms->is_ringing() == -1) {
+                return res->send("");
+              }
+
+              Alarm alarm;
+              alarms->get(alarms->is_ringing(), &alarm);
+
+              char buf[200];
+              char alarm_name[16];
+
+              strncpy(alarm_name, alarm.name, sizeof(alarm_name));
+              if (strlen(alarm.name) > 15) {
+                strncpy(alarm_name + sizeof(alarm_name) - 3, "...", 3);
+              }
+
+              snprintf(buf, sizeof(buf),
+                       "<button hx-post=\"/attend\" "
+                       "hx-vals='{\"idx\":\"%d\"}'>Attend %s</button>",
+                       alarms->ringing_idx, alarm_name);
               return res->send(buf);
             });
 

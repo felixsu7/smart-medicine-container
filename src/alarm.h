@@ -115,7 +115,6 @@ class Alarms {
   static time_t epoch(const struct Alarm* alarm, const struct tm* now,
                       int secs);
 
- private:
   char version = ALARM_VERSION;
   Alarm list[MAX_ALARMS];
 

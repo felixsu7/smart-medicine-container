@@ -16,6 +16,7 @@ class Motor {
   int save_into_fs(void);
 
   int steps(void);
+  int compartment(void);
 
   int spin_to(int compartment);
   int calibrate(int steps);
