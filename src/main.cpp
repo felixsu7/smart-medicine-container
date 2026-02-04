@@ -93,9 +93,6 @@ void setup() {
 
   // tft.drawCircle(80 - 1, 30 - 1, 25, COLOR_ORANGE);
 
-  tft.setTextSize(1);
-  tft.setTextColor(COLOR_WHITE);
-
   assert(ts.begin());
   ts.calibrate(cal);
 
@@ -215,7 +212,7 @@ void loop() {
     // updateScreenEdges(p);
 
     // determine which screen point is closest to this touch event
-    PointID n = nearestScreenPoint(p);
+    // PointID n = nearestScreenPoint(p);
 
     tft.drawPixel(p.x, p.y, random());
 

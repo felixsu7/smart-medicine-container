@@ -154,13 +154,13 @@ void XPT2046::update() {
   zraw = z;
 
   // Average pair with least distance between each measured x then y
-  Serial.printf("z1=%d,z2=%d | ", z1, z2);
-  Serial.printf("p=%d,  %d,%d  %d,%d  %d,%d", zraw, data[0], data[1], data[2],
-                data[3], data[4], data[5]);
+  // Serial.printf("z1=%d,z2=%d | ", z1, z2);
+  // Serial.printf("p=%d,  %d,%d  %d,%d  %d,%d", zraw, data[0], data[1], data[2],
+  // data[3], data[4], data[5]);
   int16_t x = besttwoavg(data[0], data[2], data[4]);
   int16_t y = besttwoavg(data[1], data[3], data[5]);
 
-  Serial.printf("| %d,%d", x, y);
+  // Serial.printf("| %d,%d", x, y);
   // Serial.println();
   // Check for x and y as y shoots up to incorrectly high numbers when, for example, the touchscreen is off.
   if (z >= Z_THRESHOLD) {
@@ -169,7 +169,7 @@ void XPT2046::update() {
       xraw = cal.alphaX * x + cal.betaX * y + cal.deltaX;
       yraw = cal.alphaY * x + cal.betaY * y + cal.deltaY;
 
-      Serial.printf("  cal: %d,%d\n", xraw, yraw);
+      // Serial.printf("  cal: %d,%d\n", xraw, yraw);
     } else {
       xraw = 4095 - x;
       yraw = 4095 - y;
