@@ -13,7 +13,7 @@
 
 static const char* TAG = "webserver";
 
-int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft) {
+int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft, SMS* sms) {
   // TODO
   assert(MDNS.begin(DEFAULT_HOSTNAME));
   assert(MDNS.addService("http", "tcp", 80));
@@ -335,6 +335,29 @@ int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft) {
                        "<button hx-post=\"/attend\" "
                        "hx-vals='{\"idx\":\"%d\"}'>Attend %s</button>",
                        alarms->ringing_idx, alarm_name);
+              return res->send(buf);
+            });
+
+  server.on("/sim_io", HTTP_POST,
+            [=](PsychicRequest* req, PsychicResponse* res) {
+              if (!req->hasParam("msg")) {
+                return res->send(400);
+              }
+
+              int ms = 1000;
+              if (req->hasParam("delay")) {
+                ms = req->getParam("delay")->value().toInt();
+              }
+
+              const char* msg = req->getParam("msg")->value().c_str();
+
+              char buf[250];
+              memset(buf, 0, sizeof(buf));
+
+              ESP_LOGD(TAG, "sim TX: %s", msg);
+              sms->IO(msg, buf, sizeof(buf), ms);
+              ESP_LOGD(TAG, "sim RX: %s", buf);
+
               return res->send(buf);
             });
 
