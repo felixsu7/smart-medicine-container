@@ -4,6 +4,9 @@
 #include "thirdparty/ULN2003.h"
 #include "utils.h"
 
+// TODO FIXME When the motor isnt spinning, the ULN2003 is still being instructed to send power to the motor, wasting alot of energy and heating up the motor.
+// A more efficent driving pattern would be nice.
+
 static const char* TAG = "motor";
 static int old_step_pos = 0;
 static CheapStepper stepper(STEPPER_IN1, STEPPER_IN2, STEPPER_IN3, STEPPER_IN4);

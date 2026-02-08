@@ -13,18 +13,10 @@
 #include "clock.h"
 #include "esp32-hal-gpio.h"
 #include "motor.h"
+#include "renderer.h"
 #include "sms.h"
+#include "thirdparty/microui.h"
 #include "utils.h"
-
-static uint16_t const SCREEN_WIDTH = 320;
-static uint16_t const SCREEN_HEIGHT = 240;
-
-enum class PointID { NONE = -1, A, B, C, COUNT };
-
-static TS_Calibration cal(TS_Point(13, 11), TS_Point(3530, 3465),
-                          TS_Point(312, 113), TS_Point(381, 2275),
-                          TS_Point(167, 214), TS_Point(2015, 710), SCREEN_WIDTH,
-                          SCREEN_HEIGHT);
 
 static const char* TAG = "main";
 
@@ -35,6 +27,7 @@ Alarms alarms;
 Webserver webserver;
 Motor motor;
 SMS sms;
+Renderer renderer;
 
 XPT2046 ts(TOUCH_CS);
 ST7789V tft = ST7789V(TFT_DC, TFT_CS);
@@ -46,11 +39,33 @@ void setup() {
 
   esp_log_level_set("*", ESP_LOG_DEBUG);
 
-  tft.init(320, 240);
-  tft.fillScreen(COLOR_DARKGRAY);
-
-  assert(ts.begin());
-  ts.calibrate(cal);
+  renderer.init(&tft, &ts);
+  tft.fillScreen(COLOR_ROSE);
+  // mu_Context* ctx = &renderer.muCtx;
+  // mu_begin(ctx);
+  // if (mu_begin_window(ctx, "My Window", mu_rect(10, 10, 140, 86))) {
+  //   int temp[] = {60, -1};
+  //   mu_layout_row(ctx, 2, temp, 0);
+  //
+  //   mu_label(ctx, "First:");
+  //   if (mu_button(ctx, "Button1")) {
+  //     printf("Button1 pressed\n");
+  //   }
+  //
+  //   mu_label(ctx, "Second:");
+  //   if (mu_button(ctx, "Button2")) {
+  //     mu_open_popup(ctx, "My Popup");
+  //   }
+  //
+  //   if (mu_begin_popup(ctx, "My Popup")) {
+  //     mu_label(ctx, "Hello world!");
+  //     mu_end_popup(ctx);
+  //   }
+  //
+  //   mu_end_window(ctx);
+  // }
+  // mu_end(ctx);
+  // renderer.present(false);
 
   // pinMode(LED_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
@@ -141,9 +156,9 @@ void loop() {
     digitalWrite(BUZZER_PIN, LOW);
   }
 
-  static long touched_tk;
-  if (bounce(&touched_tk, 10) && ts.touched()) {
-    TS_Point p = ts.getPoint();
-    tft.drawPixel(p.x, p.y, random());
-  }
+  // static long touched_tk;
+  // if (bounce(&touched_tk, 10) && ts.touched()) {
+  //   TS_Point p = ts.getPoint();
+  //   tft.drawPixel(p.x, p.y, random());
+  // }
 }

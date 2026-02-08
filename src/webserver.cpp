@@ -358,7 +358,7 @@ int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft, SMS* sms) {
               sms->IO(msg, buf, sizeof(buf), ms);
               ESP_LOGD(TAG, "sim RX: %s", buf);
 
-              return res->send(buf);
+              return res->send(200, "text/plain", buf);
             });
 
   server.on("/spin", HTTP_POST, [=](PsychicRequest* req, PsychicResponse* res) {

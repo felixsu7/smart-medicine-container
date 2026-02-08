@@ -30,9 +30,38 @@ uint16_t serialIO(HardwareSerial serial, const char* send_msg, char* recv_buf,
 
 int SMS::setup(void) {
   simSerial.begin(9600, SERIAL_8N1, SIM_RX, SIM_TX);
-  char buf[10];
-  serialIO(simSerial, "AT", buf, sizeof(buf), 1000);
+  char buf[250];
+
+  // serialIO(simSerial, "AT+CSQ", buf, sizeof(buf), 1500);
+  // ESP_LOGD(TAG, "got sim resp: %s", buf);
+
+  // serialIO(simSerial, "AT+COPS?", buf, sizeof(buf), 1500);
+  // ESP_LOGD(TAG, "got sim resp: %s", buf);
+  //
+  // serialIO(simSerial, "AT+CREG?", buf, sizeof(buf), 1500);
+  // ESP_LOGD(TAG, "got sim resp: %s", buf);
+
+  serialIO(simSerial, "AT+CMGL=?", buf, sizeof(buf), 1500);
   ESP_LOGD(TAG, "got sim resp: %s", buf);
+
+  // serialIO(simSerial, "AT+CMGF=1", buf, sizeof(buf), 1500);
+  // ESP_LOGD(TAG, "got sim resp: %s", buf);
+  //
+  // serialIO(simSerial, "AT+CMGS=\"+639472436267\"", buf, sizeof(buf), 1500);
+  // ESP_LOGD(TAG, "got sim resp: %s", buf);
+  //
+  // serialIO(simSerial, "Hello from Smart Medicine Container!", buf, sizeof(buf),
+  //          1500);
+  // ESP_LOGD(TAG, "got sim resp: %s", buf);
+  //
+  // simSerial.write(26);
+
+  // delay(1500);
+  // memset(buf, 0, sizeof(buf));
+  // while (simSerial.available()) {
+  //   Serial.print(simSerial.read());
+  // }
+
   return 0;
 }
 
