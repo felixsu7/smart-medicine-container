@@ -4,7 +4,7 @@ use <./smooth_prim.scad>;
 INCHES = 25.4;
 EPSILON = 0.001;
 
-$fn = 20;
+$fn = 125;
 wall_thickness = 3;
 LCD_depth = 4;
 LCD_height = 49;
@@ -16,7 +16,7 @@ base_height = 2.5 * INCHES;
 base_roundedness = 5;
 base_top_hole_diameter = 2 * INCHES;
 base_width = 6 * INCHES;
-base_footing_height = 2.5;
+base_footing_height = 2.6;
 base_footing_diameter = 10;
 base_backcover_thickness = 2;
 button_diameter = 12;
@@ -32,8 +32,7 @@ container_outer_slope_slant = 17.5;
 default_hinge_diameter = 2;
 default_hinge_height = 3;
 default_hinge_thickness = 2;
-divider_height = container_height + 0.5;
-divider_slant = 4;
+divider_slant = 8;
 divider_thickness = 2;
 lid_opening_ratio = 0.35;
 lid_overhang_height = 4;
@@ -42,15 +41,22 @@ lid_overhang_thickness_slop = 0.1;
 lid_diameter = container_diameter / 2 - lid_overhang_thickness - wall_thickness;
 lid_sensor_opening_x_offset = container_diameter / 2 * lid_opening_ratio + container_diameter * 0.15;
 lid_thickness = 6;
+
+divider_height = container_height - lid_thickness - lid_overhang_thickness_slop;
 pcb_depth = 80;
 pcb_height = 7;
 pcb_width = 120;
-show_base = false;
-show_base_backcover = false;
+show_base = true;
+show_base_backcover = true;
 show_container = true;
 show_lid = true;
 stepper_diameter = 28;
 stepper_height = 50;
+
+module USBC() {
+  color("green")
+    cube([8.34 + 0.1, 2.56 + 0.1, 10]);
+}
 
 // not really, there is no base for example
 module button() {
@@ -61,7 +67,7 @@ module pcb_mount() {
   difference() {
     cube([pcb_width + wall_thickness, pcb_depth + wall_thickness, pcb_height]);
     translate([wall_thickness / 2, wall_thickness / 2, -EPSILON])
-      cube([pcb_width, pcb_width, pcb_height + EPSILON * 2]);
+      cube([pcb_width, pcb_depth, pcb_height + EPSILON * 2]);
   }
 }
 
@@ -81,7 +87,7 @@ module base_hinge(hinge_height = default_hinge_height, hinge_diameter = default_
 
 module base() {
   // weirdass coordinates
-  translate([wall_thickness * 2 + base_width / 16, wall_thickness * 2 + base_depth / 3, wall_thickness - EPSILON])
+  translate([wall_thickness / 2, wall_thickness * 2 + base_depth / 3, wall_thickness - EPSILON])
     pcb_mount();
 
   color("red")
@@ -121,6 +127,11 @@ module base() {
       //hallow back
       translate([wall_thickness * 3, base_depth - wall_thickness - EPSILON, wall_thickness * 3])
         cube([base_width - wall_thickness * 6, wall_thickness + 0.01, base_height - wall_thickness * 6]);
+
+      // hallow usbc port
+      translate([-1, wall_thickness * 4 + base_depth / 3, wall_thickness + pcb_height + 4])
+        rotate([90, 0, 90])
+          USBC();
     }
 
   //container mounting
@@ -187,7 +198,7 @@ module base_backcover() {
     cube([base_backcover_thickness * 4, base_backcover_thickness, base_height - wall_thickness * 6]);
 
   // hinge on other side
-  translate([base_width - wall_thickness * 5 - default_hinge_thickness / 2, base_backcover_thickness * 2, base_height / 2 - base_backcover_thickness * 7])
+  translate([base_width - wall_thickness * 5 - default_hinge_thickness / 2 - EPSILON, base_backcover_thickness * 2, base_height / 2 - base_backcover_thickness * 7])
     base_hinge();
 
   // handle for it
@@ -204,14 +215,14 @@ module stepper_profile() {
 
 module container_pillar() {
   difference() {
-    scale([1.1, 1.1, 0.99])
+    scale([1.1, 1.1, 0.855])
       stepper_profile();
 
     translate([0, 0, -0.01])
-      scale([1.025, 1.025, 1])
+      scale([1.025, 1.025, 2])
         stepper_profile();
 
-    translate([0, 0, container_height - 1.299])
+    translate([0, 0, container_height - 2 - lid_thickness])
       rotate([0, 180, 0])
         mount_tabs();
 
@@ -225,26 +236,31 @@ module container_pillar() {
       cube([14.95, 2, 100]);
   }
 
-  translate([35 / 2, 0, container_height - 1.3])
-    cylinder(d=3.5, 1.5);
+  //extra height mounting tabs
+  translate([35 / 2, 0, container_height - 2 - 0.01 - lid_thickness])
+    cylinder(d=3.5, h=2);
 
-  translate([-35 / 2, 0, container_height - 1.3])
-    cylinder(d=3.5, 1.5);
-
-  translate([0, 0, container_height - 1.299])
+  translate([-35 / 2, 0, container_height - 2 - 0.01 - lid_thickness])
+    cylinder(d=3.5, h=2);
+  /*
+  translate([0, 0, container_height - 2 - lid_thickness])
     rotate([0, 180, 0])
       stepper_28byj48();
+	  */
 }
 
 module container_dividers() {
   difference() {
-    for (i = [45 / 2 + 0:45:360])
-      translate([0, 0, wall_thickness])
-        rotate([90, 0, i])
-          linear_extrude(container_diameter / 2 - wall_thickness - 0.01)
-            polygon([[-divider_slant, 0], [divider_thickness + divider_slant, 0], [divider_thickness, divider_height - wall_thickness - 0.01], [0, divider_height - wall_thickness - 0.01], [-divider_slant, 0]]);
-    //cube([container_diameter - wall_thickness * 2.5 - 0.01, divider_thickness, divider_height], center=true);
-
+    union() {
+      for (i = [45 / 2 + 0:45:360 + 45 / 2])
+        translate([0, 0, wall_thickness])
+          rotate([90, 0, i]) {
+            linear_extrude(container_diameter / 2 - wall_thickness - 1)
+              //              polygon([[-divider_slant, 0], [divider_thickness + divider_slant, 0], [divider_thickness, divider_height - wall_thickness - 0.01], [0, divider_height - wall_thickness - 0.01], [-divider_slant, 0]]);
+              polygon([[0, 0], [(divider_thickness + divider_slant) / 2, 0], [(divider_thickness) / 2, divider_height - wall_thickness - 0.01], [-(divider_thickness) / 2, divider_height - wall_thickness - 0.01], [-(divider_thickness + divider_slant) / 2, 0]]);
+            //cube([container_diameter - wall_thickness * 2.5 - 0.01, divider_thickness, divider_height], center=true);
+          }
+    }
     // pillar hollow
     translate([0, container_hole_y_offset, -1])
       scale([1.15, 1.15, 1.1])
@@ -254,11 +270,11 @@ module container_dividers() {
       cylinder(h=100, d=44);
 
     // lid overhang entrance
-    translate([0, 0, container_height - lid_overhang_height])
+    translate([0, 0, container_height - lid_thickness - lid_overhang_height - lid_overhang_thickness_slop])
       difference() {
         cylinder(lid_overhang_height * 2, container_diameter / 2 - wall_thickness + 0.01, container_diameter / 2 - wall_thickness + 0.01);
 
-        cylinder(lid_overhang_height * 2, container_diameter / 2 - wall_thickness - lid_overhang_thickness, container_diameter / 2 - wall_thickness - lid_overhang_thickness);
+        cylinder(lid_overhang_height * 2, container_diameter / 2 - wall_thickness - lid_overhang_thickness - lid_overhang_thickness_slop / 2, container_diameter / 2 - wall_thickness - lid_overhang_thickness - lid_overhang_thickness_slop / 2);
       }
   }
 }
@@ -282,14 +298,14 @@ module mount_tabs() {
 
 module container_slope() {
   difference() {
-    cylinder(container_height - wall_thickness * 1.5, compartment_slope_start_r, compartment_slope_end_r);
+    cylinder(container_height - wall_thickness - 2 - lid_thickness, compartment_slope_start_r, compartment_slope_end_r);
 
     // pillar hollow
     translate([0, 0, -0.01])
       scale([1.1, 1.1, 0.99])
         stepper_profile();
 
-    translate([0, 0, container_height - wall_thickness - 1.495])
+    translate([0, 0, container_height - 2 - lid_thickness - wall_thickness])
       rotate([0, 180, 0])
         mount_tabs();
     /*
@@ -301,12 +317,12 @@ module container_slope() {
 
 module stepper_cover() {
   difference() {
-    cylinder(h=2.5, d=44);
+    cylinder(h=2 - lid_overhang_thickness_slop, d=44);
     translate([35 / 2, 0, -0.1])
-      cylinder(d=3.5, 3);
+      cylinder(d=3.55, 3);
 
     translate([-35 / 2, 0, -0.1])
-      cylinder(d=3.5, 3);
+      cylinder(d=3.55, 3);
 
     translate([0, 8, -2])
       cylinder(d=9, h=5);
@@ -321,7 +337,7 @@ module container() {
 
       // hallow
       translate([0, 0, wall_thickness - EPSILON])
-        cylinder(container_height, container_diameter / 2 - wall_thickness, container_diameter / 2 - wall_thickness);
+        cylinder(container_height, container_diameter / 2 - wall_thickness + lid_overhang_thickness_slop / 2, container_diameter / 2 - wall_thickness + lid_overhang_thickness_slop / 2);
 
       //hole
       translate([0, container_hole_y_offset, -wall_thickness - EPSILON])
@@ -355,10 +371,10 @@ module container() {
   color("green")
     translate([0, 0, wall_thickness])
       difference() {
-        cylinder(container_height - lid_overhang_height - wall_thickness - 0.01, container_diameter / 2 - wall_thickness, container_diameter / 2 - wall_thickness);
+        cylinder(container_height - wall_thickness - lid_thickness - lid_overhang_height - lid_overhang_thickness_slop + 1, container_diameter / 2 - wall_thickness, container_diameter / 2 - wall_thickness + 1);
 
         translate([0, 0, -lid_overhang_height + 0.01])
-          cylinder(container_height, container_diameter / 2 - wall_thickness - container_outer_slope_slant, container_diameter / 2 - wall_thickness);
+          cylinder(container_height - wall_thickness - lid_thickness + 5, container_diameter / 2 - wall_thickness - container_outer_slope_slant, container_diameter / 2 - wall_thickness);
       }
 }
 
@@ -394,7 +410,7 @@ module lid() {
           cube([2.5, 2.5, 1.25 * 2]);
 
       // shaft mount
-      translate([0, container_hole_y_offset, -1.5])
+      translate([0, container_hole_y_offset, -0.5])
         rotate([0, 180, 0])
           // shaft
           translate([0, 8, -5]) {
@@ -428,14 +444,14 @@ module device() {
       rotate([0, 0, 180])
         container();
 
-      translate([0, -container_hole_y_offset, container_height - 2])
+      translate([0, -container_hole_y_offset, container_height - 2 - lid_thickness + 5])
         rotate([0, 0, 180])
           stepper_cover();
     }
   }
 
   if (show_lid) {
-    translate([base_width / 2, base_depth / 2, base_height + base_container_spacing + container_height + 0.75])
+    translate([base_width / 2, base_depth / 2, base_height + base_container_spacing + container_height - lid_thickness + 15])
       rotate([0, 0, -(360 / 8) * 1.5])
         lid();
   }
