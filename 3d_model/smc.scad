@@ -4,7 +4,7 @@ use <./smooth_prim.scad>;
 INCHES = 25.4;
 EPSILON = 0.001;
 
-$fn = 125;
+$fn = 150;
 wall_thickness = 3;
 LCD_depth = 4;
 LCD_height = 49;
@@ -120,6 +120,10 @@ module base() {
       translate([base_width * 0.1, base_depth * 0.9, base_height - wall_thickness - EPSILON])
         cylinder(h=wall_thickness + EPSILON, d=antenna_diameter);
 
+      // hallow top for buzzer
+      translate([base_width * 0.1, base_depth * 0.1, base_height - wall_thickness - EPSILON])
+        cylinder(h=wall_thickness + EPSILON, d=11);
+
       // TODO what is this
       translate([base_width / 2, base_depth / 2, base_height - 1.5])
         cylinder(h=container_height, d=container_diameter + 0.25);
@@ -133,6 +137,12 @@ module base() {
         rotate([90, 0, 90])
           USBC();
     }
+
+  // LCD back handles
+  translate([base_width / 2 - LCD_width / 2, wall_thickness * 2, base_height / 2 - LCD_height / 2])
+    cube([LCD_width / 10, wall_thickness * 2, LCD_height]);
+  translate([base_width / 2 + LCD_width / 2 - LCD_width / 10, wall_thickness * 2, base_height / 2 - LCD_height / 2])
+    cube([LCD_width / 10, wall_thickness * 2, LCD_height]);
 
   //container mounting
   difference() {
@@ -158,7 +168,7 @@ module base() {
     cylinder(h=base_footing_height, d=base_footing_diameter);
 
   // hinges
-  translate([wall_thickness * 2 + default_hinge_diameter / 2, base_depth + default_hinge_diameter - EPSILON, base_height / 2 + default_hinge_height / 2 - default_hinge_height * 3 * 2.1])
+  translate([wall_thickness * 2 + default_hinge_diameter / 2, base_depth + default_hinge_diameter - EPSILON * 10, base_height / 2 + default_hinge_height / 2 - default_hinge_height * 3 * 2.1])
   //  not really parametric
   for (i = [0:6]) {
     // blocker for the bottommost
@@ -172,7 +182,7 @@ module base() {
   }
 
   // other side hinge
-  translate([base_width - wall_thickness * 2 - default_hinge_diameter / 2, base_depth + default_hinge_diameter - EPSILON, base_height / 2 - default_hinge_height / 2 - default_hinge_height * 2.5]) {
+  translate([base_width - wall_thickness * 2 - default_hinge_diameter / 2, base_depth + default_hinge_diameter - EPSILON * 10, base_height / 2 - default_hinge_height / 2 - default_hinge_height * 2.5]) {
     rotate([0, 0, 90])
       base_hinge(hinge_thickness=default_hinge_thickness);
 
@@ -258,13 +268,31 @@ module container_dividers() {
             linear_extrude(container_diameter / 2 - wall_thickness - 1)
               //              polygon([[-divider_slant, 0], [divider_thickness + divider_slant, 0], [divider_thickness, divider_height - wall_thickness - 0.01], [0, divider_height - wall_thickness - 0.01], [-divider_slant, 0]]);
               polygon([[0, 0], [(divider_thickness + divider_slant) / 2, 0], [(divider_thickness) / 2, divider_height - wall_thickness - 0.01], [-(divider_thickness) / 2, divider_height - wall_thickness - 0.01], [-(divider_thickness + divider_slant) / 2, 0]]);
+
+            cylinder(h=65, d=12.5);
+
             //cube([container_diameter - wall_thickness * 2.5 - 0.01, divider_thickness, divider_height], center=true);
           }
     }
+
+    difference() {
+      translate([0, 0, 0.499]) {
+        cube([container_diameter, 1, 2], center=true);
+        cube([1, container_diameter, 2], center=true);
+      }
+
+      translate([base_width / 2, base_depth / 2, base_height - wall_thickness - 0.005])
+        cylinder(d=stepper_diameter, h=stepper_height);
+    }
+
     // pillar hollow
+
     translate([0, container_hole_y_offset, -1])
       scale([1.15, 1.15, 1.1])
         stepper_profile();
+
+    translate([0, container_hole_y_offset, -5 + EPSILON])
+      cylinder(h=5, d=200);
 
     translate([0, container_hole_y_offset, -1])
       cylinder(h=100, d=44);
@@ -368,7 +396,20 @@ module container() {
     translate([0, container_hole_y_offset, wall_thickness]) container_slope();
 
   //outer slope
-  color("green")
+  color("green") {
+    translate([0, 0, 6.25]) {
+      difference() {
+        rotate_extrude(angle=360)
+          translate([51, 0, 50])
+            square(6.25, center=true);
+
+        translate([0, 0, 6.25 / 2])
+          rotate_extrude(angle=360)
+            translate([50 - 6.25 / 2, 0, 50])
+              circle(r=6.25);
+      }
+    }
+
     translate([0, 0, wall_thickness])
       difference() {
         cylinder(container_height - wall_thickness - lid_thickness - lid_overhang_height - lid_overhang_thickness_slop + 1, container_diameter / 2 - wall_thickness, container_diameter / 2 - wall_thickness + 1);
@@ -376,6 +417,7 @@ module container() {
         translate([0, 0, -lid_overhang_height + 0.01])
           cylinder(container_height - wall_thickness - lid_thickness + 5, container_diameter / 2 - wall_thickness - container_outer_slope_slant, container_diameter / 2 - wall_thickness);
       }
+  }
 }
 
 module lid() {
