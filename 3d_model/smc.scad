@@ -1,21 +1,130 @@
-use <./stepper.scad>;
-use <./smooth_prim.scad>;
+//use <./stepper.scad>;
+//
+//  28byj-48 stepper motor from datasheet and measurements
+//  Russ Hughes, russ@owt.com
+//  Attribution 4.0 International (CC BY 4.0)
+//
+
+module stepper_28byj48(segments = 32) {
+  $fn = segments;
+  module mount_tabs() {
+    difference() {
+      hull() {
+        translate([35 / 2, 0, 0])
+          cylinder(d=7, 0.8);
+
+        translate([-35 / 2, 0, 0])
+          cylinder(d=7, 0.8);
+      }
+      translate([35 / 2, 0, -0.1])
+        cylinder(d=3.5, 0.8 + 0.2);
+
+      translate([-35 / 2, 0, -0.1])
+        cylinder(d=3.5, 0.8 + 0.2);
+    }
+  }
+
+  // main body
+  color("Silver")
+    cylinder(d=28, h=19, $fn=$fn * 2);
+
+  // wire cover
+  color("DeepSkyBlue")
+    translate([-14.6 / 2, -17, 0])
+      cube([14.6, 5.8, 16.5]);
+
+  color("Silver")
+    mount_tabs();
+
+  // shaft and flange
+  translate([0, 0, -1.5]) {
+    // flange
+    translate([0, 8, 0])
+      color("Silver")
+        cylinder(d=9, h=1.5);
+
+    color("Goldenrod") {
+      // shaft
+      translate([0, 8, -5]) {
+        difference() {
+          cylinder(d=5, h=10);
+
+          // shaft cutouts
+          translate([1.5, -2.5, -0.1])
+            cube([2, 5, 4.5 + 0.1]);
+
+          translate([-2 - 1.5, -2.5, -0.1])
+            cube([2, 5, 4.5 + 0.1]);
+        }
+      }
+    }
+  }
+}
+
+//use <./smooth_prim.scad>;
+module SmoothCube(size, smooth_rad) {
+  $fa = ($fa >= 12) ? 1 : $fa;
+  $fs = ($fs >= 2) ? 0.4 : $fs;
+
+  size = is_num(size) ? [size, size, size] : size;
+  smooth_rad =
+    is_num(smooth_rad) ? [smooth_rad, smooth_rad, smooth_rad]
+    : smooth_rad;
+  smooth_base = smooth_rad[0];
+  scales = smooth_rad / smooth_base;
+
+  scalex = scales[0] * ( (smooth_rad[0] < size[0] / 2) ? 1 : size[0] / (2 * smooth_rad[0]));
+  scaley = scales[1] * ( (smooth_rad[1] < size[1] / 2) ? 1 : size[1] / (2 * smooth_rad[1]));
+  scalez = scales[2] * ( (smooth_rad[2] < size[2] / 2) ? 1 : size[2] / (2 * smooth_rad[2]));
+  smoothx = smooth_rad[0] * scalex / scales[0];
+  smoothy = smooth_rad[1] * scaley / scales[1];
+  smoothz = smooth_rad[2] * scalez / scales[2];
+
+  hull() {
+    translate([smoothx, smoothy, smoothz])
+      scale([scalex, scaley, scalez])
+        sphere(r=smooth_base);
+    translate([size[0] - smoothx, smoothy, smoothz])
+      scale([scalex, scaley, scalez])
+        sphere(r=smooth_base);
+    translate([smoothx, size[1] - smoothy, smoothz])
+      scale([scalex, scaley, scalez])
+        sphere(r=smooth_base);
+    translate([smoothx, smoothy, size[2] - smoothz])
+      scale([scalex, scaley, scalez])
+        sphere(r=smooth_base);
+    translate([size[0] - smoothx, size[1] - smoothy, smoothz])
+      scale([scalex, scaley, scalez])
+        sphere(r=smooth_base);
+    translate([size[0] - smoothx, smoothy, size[2] - smoothz])
+      scale([scalex, scaley, scalez])
+        sphere(r=smooth_base);
+    translate([smoothx, size[1] - smoothy, size[2] - smoothz])
+      scale([scalex, scaley, scalez])
+        sphere(r=smooth_base);
+    translate([size[0] - smoothx, size[1] - smoothy, size[2] - smoothz])
+      scale([scalex, scaley, scalez])
+        sphere(r=smooth_base);
+  }
+}
+
+// ACTUAL BEGIN
 
 INCHES = 25.4;
 EPSILON = 0.001;
 
-$fn = 150;
+$fn = 20;
 wall_thickness = 3;
 LCD_depth = 4;
 LCD_height = 49;
 LCD_width = 69;
 antenna_diameter = 8;
 base_container_spacing = 0.1 * INCHES;
-base_depth = 6 * INCHES;
+base_depth = 6.5 * INCHES;
 base_height = 2.5 * INCHES;
 base_roundedness = 5;
 base_top_hole_diameter = 2 * INCHES;
-base_width = 6 * INCHES;
+base_width = 6.5 * INCHES;
 base_footing_height = 2.6;
 base_footing_diameter = 10;
 base_backcover_thickness = 2;
@@ -23,7 +132,7 @@ button_diameter = 12;
 button_height = 7.4;
 compartment_slope_end_r = 22;
 compartment_slope_start_r = 25;
-container_diameter = 5.5 * INCHES;
+container_diameter = 6 * INCHES;
 container_height = 2 * INCHES;
 container_hole_diameter = 1.3 * INCHES;
 container_hole_thickness = 1;
@@ -46,10 +155,10 @@ divider_height = container_height - lid_thickness - lid_overhang_thickness_slop;
 pcb_depth = 80;
 pcb_height = 7;
 pcb_width = 120;
-show_base = true;
-show_base_backcover = true;
+show_base = false;
+show_base_backcover = false;
 show_container = true;
-show_lid = true;
+show_lid = false;
 stepper_diameter = 28;
 stepper_height = 50;
 
@@ -113,7 +222,7 @@ module base() {
           button();
 
       // hallow top for connection to container itself 
-      translate([base_width / 2, base_depth / 2 + container_hole_y_offset, base_height - wall_thickness - EPSILON])
+      translate([base_width / 2, base_depth / 2 - container_hole_y_offset, base_height - wall_thickness - EPSILON])
         cylinder(d=stepper_diameter, h=wall_thickness + EPSILON * 2);
 
       // hallow top for antenna
@@ -153,7 +262,7 @@ module base() {
       }
 
     // hallow for connection to container
-    translate([base_width / 2, base_depth / 2 + container_hole_y_offset, base_height - wall_thickness - 0.005])
+    translate([base_width / 2, base_depth / 2 - container_hole_y_offset, base_height - wall_thickness - 0.005])
       cylinder(d=stepper_diameter, h=5.001);
   }
 
@@ -168,7 +277,7 @@ module base() {
     cylinder(h=base_footing_height, d=base_footing_diameter);
 
   // hinges
-  translate([wall_thickness * 2 + default_hinge_diameter / 2, base_depth + default_hinge_diameter - EPSILON * 10, base_height / 2 + default_hinge_height / 2 - default_hinge_height * 3 * 2.1])
+  translate([wall_thickness * 2 + default_hinge_diameter / 2, base_depth + default_hinge_diameter - EPSILON * 100, base_height / 2 + default_hinge_height / 2 - default_hinge_height * 3 * 2.1])
   //  not really parametric
   for (i = [0:6]) {
     // blocker for the bottommost
@@ -182,7 +291,7 @@ module base() {
   }
 
   // other side hinge
-  translate([base_width - wall_thickness * 2 - default_hinge_diameter / 2, base_depth + default_hinge_diameter - EPSILON * 10, base_height / 2 - default_hinge_height / 2 - default_hinge_height * 2.5]) {
+  translate([base_width - wall_thickness * 2 - default_hinge_diameter / 2, base_depth + default_hinge_diameter - EPSILON * 100, base_height / 2 - default_hinge_height / 2 - default_hinge_height * 2.5]) {
     rotate([0, 0, 90])
       base_hinge(hinge_thickness=default_hinge_thickness);
 
@@ -269,7 +378,7 @@ module container_dividers() {
               //              polygon([[-divider_slant, 0], [divider_thickness + divider_slant, 0], [divider_thickness, divider_height - wall_thickness - 0.01], [0, divider_height - wall_thickness - 0.01], [-divider_slant, 0]]);
               polygon([[0, 0], [(divider_thickness + divider_slant) / 2, 0], [(divider_thickness) / 2, divider_height - wall_thickness - 0.01], [-(divider_thickness) / 2, divider_height - wall_thickness - 0.01], [-(divider_thickness + divider_slant) / 2, 0]]);
 
-            cylinder(h=65, d=12.5);
+            cube([divider_thickness * 2, container_diameter / 2, container_diameter / 2 - wall_thickness]);
 
             //cube([container_diameter - wall_thickness * 2.5 - 0.01, divider_thickness, divider_height], center=true);
           }
@@ -400,12 +509,12 @@ module container() {
     translate([0, 0, 6.25]) {
       difference() {
         rotate_extrude(angle=360)
-          translate([51, 0, 50])
+          translate([container_diameter / 2 - wall_thickness - container_outer_slope_slant, 0, 50])
             square(6.25, center=true);
 
         translate([0, 0, 6.25 / 2])
           rotate_extrude(angle=360)
-            translate([50 - 6.25 / 2, 0, 50])
+            translate([container_diameter / 2 - wall_thickness - container_outer_slope_slant - 6.25 / 2, 0, 50])
               circle(r=6.25);
       }
     }
@@ -445,10 +554,10 @@ module lid() {
       rotate([0, 0, 180 - 45 / 2])
         translate([lid_sensor_opening_x_offset, 1.25, 1.25 / 2])
           rotate([0, 0, 180])
-            cube([lid_sensor_opening_x_offset / 2, 1.25 * 2, 1.25 * 2]);
+            cube([lid_sensor_opening_x_offset * 0.55, 1.25 * 2, 1.25 * 2]);
 
       rotate([0, 0, 180 - 45 / 2])
-        translate([23.5, -1.25, 0])
+        translate([container_hole_diameter * 0.70, -1.25, 0])
           cube([2.5, 2.5, 1.25 * 2]);
 
       // shaft mount
@@ -469,6 +578,27 @@ module lid() {
               }
           }
     }
+
+  // takip ni jul
+  translate([0, 0, lid_thickness * 2])
+    rotate([0, 0, -(360 / 8) + 5])
+      difference() {
+        intersection() {
+          rotate_extrude(angle=(360 / 8) * 1 - 5)
+            translate([2, 0, 0])
+              polygon(points=[[0, 0], [lid_diameter - lid_overhang_thickness + lid_overhang_thickness_slop, 0], [lid_diameter - lid_overhang_thickness + lid_overhang_thickness_slop, -lid_overhang_height], [lid_diameter - lid_overhang_thickness_slop, -lid_overhang_height], [lid_diameter - lid_overhang_thickness_slop, lid_thickness / 2], [0, lid_thickness / 2], [0, 0]]);
+
+          translate([0, 0, -lid_overhang_height])
+            cylinder(lid_thickness + lid_overhang_height, lid_diameter + lid_overhang_thickness, lid_diameter + lid_overhang_thickness);
+        }
+        cylinder(lid_thickness, container_diameter * lid_opening_ratio / 2, container_diameter * lid_opening_ratio / 2);
+      }
+
+  /* TODO
+  translate([20, -10, 15])
+    rotate([90, 270, 180])
+      base_hinge();
+	  */
 }
 
 module device() {
