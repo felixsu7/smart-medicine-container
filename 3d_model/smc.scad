@@ -113,7 +113,7 @@ module SmoothCube(size, smooth_rad) {
 INCHES = 25.4;
 EPSILON = 0.001;
 
-$fn = 20;
+$fn = 200;
 wall_thickness = 3;
 LCD_depth = 4;
 LCD_height = 49;
@@ -155,10 +155,10 @@ divider_height = container_height - lid_thickness - lid_overhang_thickness_slop;
 pcb_depth = 80;
 pcb_height = 7;
 pcb_width = 120;
-show_base = false;
-show_base_backcover = false;
+show_base = true;
+show_base_backcover = true;
 show_container = true;
-show_lid = false;
+show_lid = true;
 stepper_diameter = 28;
 stepper_height = 50;
 
@@ -248,10 +248,12 @@ module base() {
     }
 
   // LCD back handles
+  translate([0,base_depth + wall_thickness,0]) {
   translate([base_width / 2 - LCD_width / 2, wall_thickness * 2, base_height / 2 - LCD_height / 2])
     cube([LCD_width / 10, wall_thickness * 2, LCD_height]);
   translate([base_width / 2 + LCD_width / 2 - LCD_width / 10, wall_thickness * 2, base_height / 2 - LCD_height / 2])
     cube([LCD_width / 10, wall_thickness * 2, LCD_height]);
+}
 
   //container mounting
   difference() {
@@ -378,8 +380,24 @@ module container_dividers() {
               //              polygon([[-divider_slant, 0], [divider_thickness + divider_slant, 0], [divider_thickness, divider_height - wall_thickness - 0.01], [0, divider_height - wall_thickness - 0.01], [-divider_slant, 0]]);
               polygon([[0, 0], [(divider_thickness + divider_slant) / 2, 0], [(divider_thickness) / 2, divider_height - wall_thickness - 0.01], [-(divider_thickness) / 2, divider_height - wall_thickness - 0.01], [-(divider_thickness + divider_slant) / 2, 0]]);
 
-            cube([divider_thickness * 2, container_diameter / 2, container_diameter / 2 - wall_thickness]);
+difference() {
+translate([divider_thickness*2.33, -1.5,0])
+            cube([divider_thickness, divider_thickness*4- lid_overhang_height, container_diameter / 2 - wall_thickness - EPSILON]);
 
+			
+translate([divider_thickness*2.3+divider_thickness,1.95,0])
+cylinder(h=container_diameter/2 - wall_thickness,d=divider_thickness*2);
+}
+
+
+difference() {
+translate([-divider_thickness*3.33, -1.5,0])
+            cube([divider_thickness, divider_thickness*4- lid_overhang_height, container_diameter / 2 - wall_thickness - EPSILON]);
+
+			
+translate([-divider_thickness*3.3,1.95,0])
+cylinder(h=container_diameter/2 - wall_thickness,d=divider_thickness*2);
+}
             //cube([container_diameter - wall_thickness * 2.5 - 0.01, divider_thickness, divider_height], center=true);
           }
     }
@@ -474,7 +492,7 @@ module container() {
 
       // hallow
       translate([0, 0, wall_thickness - EPSILON])
-        cylinder(container_height, container_diameter / 2 - wall_thickness + lid_overhang_thickness_slop / 2, container_diameter / 2 - wall_thickness + lid_overhang_thickness_slop / 2);
+        cylinder(container_height, container_diameter / 2 + lid_overhang_thickness_slop / 2 -  wall_thickness, container_diameter / 2 + lid_overhang_thickness_slop / 2 - wall_thickness);
 
       //hole
       translate([0, container_hole_y_offset, -wall_thickness - EPSILON])
@@ -580,30 +598,64 @@ module lid() {
     }
 
   // takip ni jul
-  translate([0, 0, lid_thickness * 2])
+
+  lid_cover_thickness= lid_thickness/4;
+  lid_cover_overhang_height= lid_overhang_height+ 4.5;
+
+  translate([0, 0, 4.5*4])
     rotate([0, 0, -(360 / 8) + 5])
       difference() {
         intersection() {
           rotate_extrude(angle=(360 / 8) * 1 - 5)
             translate([2, 0, 0])
-              polygon(points=[[0, 0], [lid_diameter - lid_overhang_thickness + lid_overhang_thickness_slop, 0], [lid_diameter - lid_overhang_thickness + lid_overhang_thickness_slop, -lid_overhang_height], [lid_diameter - lid_overhang_thickness_slop, -lid_overhang_height], [lid_diameter - lid_overhang_thickness_slop, lid_thickness / 2], [0, lid_thickness / 2], [0, 0]]);
+              polygon(points=[[0, 0], [lid_diameter - lid_overhang_thickness + lid_overhang_thickness_slop, 0], [lid_diameter - lid_overhang_thickness + lid_overhang_thickness_slop, -lid_cover_overhang_height], [lid_diameter - lid_overhang_thickness_slop, -lid_cover_overhang_height], [lid_diameter - lid_overhang_thickness_slop, lid_cover_thickness], [0, lid_cover_thickness], [0, 0]]);
 
-          translate([0, 0, -lid_overhang_height])
-            cylinder(lid_thickness + lid_overhang_height, lid_diameter + lid_overhang_thickness, lid_diameter + lid_overhang_thickness);
+          translate([0, 0, -lid_cover_overhang_height])
+            cylinder(lid_cover_thickness + lid_cover_overhang_height, lid_diameter + lid_overhang_thickness, lid_diameter + lid_overhang_thickness);
         }
-        cylinder(lid_thickness, container_diameter * lid_opening_ratio / 2, container_diameter * lid_opening_ratio / 2);
+        cylinder(lid_cover_thickness, container_diameter * lid_opening_ratio / 2, container_diameter * lid_opening_ratio / 2);
       }
 
-  /* TODO
-  translate([20, -10, 15])
-    rotate([90, 270, 180])
+  translate([25, -10, 8])
+    rotate([90, 270, 157.5]) {
       base_hinge();
-	  */
+	  }
+
+  translate([25, -10, 8])
+    rotate([90, 270, 157.5]) {
+
+translate([4.5*3,0,0]) {
+	  translate([0,0,3.5])
+	  rotate([0,0,270])
+	  base_hinge();
+
+	  translate([0,0,-3.5])
+	  rotate([0,0,270])
+	  base_hinge();
+
+translate([-2,40,0]) 
+rotate([90, 0, 90]) {
+	translate([0,-7,0])
+	  cylinder(h=10,d=5);
+
+	  	translate([0,13,0])
+	  cylinder(h=10,d=5);
+
+translate([-2.5,-7,6])
+	 cube([5,20,4]);
+
+}
+}
+	}
+
+
+
 }
 
 module device() {
   if (show_base_backcover) {
-    translate([wall_thickness * 3, base_depth - base_backcover_thickness * -1, wall_thickness * 3])
+    translate([wall_thickness * 3, base_depth * 1.5, wall_thickness * 3])
+	rotate([90,0,0])
       base_backcover();
   }
 
@@ -612,21 +664,39 @@ module device() {
   }
 
   if (show_container) {
-    translate([base_width / 2, base_depth / 2, base_height + base_container_spacing]) {
+    translate([base_width / 2, base_depth * 2,0]) {
       rotate([0, 0, 180])
         container();
 
-      translate([0, -container_hole_y_offset, container_height - 2 - lid_thickness + 5])
+      translate([0, 125, 0])
         rotate([0, 0, 180])
           stepper_cover();
     }
   }
 
   if (show_lid) {
-    translate([base_width / 2, base_depth / 2, base_height + base_container_spacing + container_height - lid_thickness + 15])
+    translate([base_width / 2, base_depth * 3.5, 0])
       rotate([0, 0, -(360 / 8) * 1.5])
         lid();
   }
+
+  if (true) {
+		//hinge pillars or idk
+		translate([base_width/2,base_depth+wall_thickness*3,0]) {
+				cylinder(d=default_hinge_thickness-0.25, h=9);
+				translate([10,0,0])
+				cylinder(d=default_hinge_thickness-0.25, h=42);
+				translate([20,0,0])	{
+					cylinder(d=default_hinge_thickness-0.25, h=9);
+					translate([0,0,9])
+					cylinder(d=default_hinge_diameter, h=2);
+
+					translate([5,0,0])
+cylinder(d=default_hinge_diameter, h=2);
+
+		}
+			}
+	}
 }
 
 device();
