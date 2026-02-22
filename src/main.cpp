@@ -1,5 +1,4 @@
 #include <SPI.h>
-#include <pins.h>
 #include <thirdparty/ST7789V.h>  // or Adafruit_ILI9341.h
 #include <thirdparty/XPT2046.h>
 #include "./alarm.h"
@@ -13,9 +12,8 @@
 #include "clock.h"
 #include "esp32-hal-gpio.h"
 #include "motor.h"
-#include "renderer.h"
 #include "sms.h"
-#include "thirdparty/microui.h"
+#include "thirdparty/lvgl/lvgl.h"
 #include "utils.h"
 
 static const char* TAG = "main";
@@ -27,10 +25,32 @@ Alarms alarms;
 Webserver webserver;
 Motor motor;
 SMS sms;
-Renderer renderer;
 
 XPT2046 ts(TOUCH_CS);
 ST7789V tft = ST7789V(TFT_DC, TFT_CS);
+
+uint32_t lvglMillis(void) {
+  return millis();
+}
+
+void my_flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px_buf) {
+  Serial.printf("begin flush 1");
+  /* Show the rendered image on the display */
+  tft.startWrite();
+  Serial.printf("begin flush 2");
+  tft.writeAddrWindow(area->x1, area->y1, area->x2, area->y2);
+  Serial.printf("begin flush 3");
+  int px_buf_size =
+      (area->x2 - area->x1) * (area->y2 - area->y1) * 2;  // 16bit now
+  tft.write(px_buf, px_buf_size);
+
+  Serial.printf("begin flush 4");
+  tft.endWrite();
+
+  Serial.printf("flush: %d", px_buf_size);
+
+  lv_display_flush_ready(disp);
+}
 
 void setup() {
   Serial.begin(115200);
@@ -39,8 +59,27 @@ void setup() {
 
   esp_log_level_set("*", ESP_LOG_DEBUG);
 
-  renderer.init(&tft, &ts);
-  tft.fillScreen(COLOR_ROSE);
+  tft.init(320, 240);
+  tft.fillScreen(COLOR_BLACK);
+
+  lv_init();
+  lv_tick_set_cb(lvglMillis);
+
+  lv_display_t* display = lv_display_create(320, 240);
+
+  /* LVGL will render to this 1/10 screen sized buffer for 2 bytes/pixel */
+  static uint8_t buf[320 * 240 / 10 * 2];
+  lv_display_set_buffers(display, buf, NULL, sizeof(buf),
+                         LV_DISPLAY_RENDER_MODE_PARTIAL);
+
+  /* This callback will display the rendered image */
+  lv_display_set_flush_cb(display, my_flush_cb);
+
+  /* Create widgets */
+  lv_obj_t* label = lv_label_create(lv_screen_active());
+  lv_label_set_text(label, "Hello LVGL!");
+
+  // tft.fillScreen(COLOR_ROSE);
   // mu_Context* ctx = &renderer.muCtx;
   // mu_begin(ctx);
   // if (mu_begin_window(ctx, "My Window", mu_rect(10, 10, 140, 86))) {
@@ -67,9 +106,10 @@ void setup() {
   // mu_end(ctx);
   // renderer.present(false);
 
-  // pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(PRI_BUTTON_PIN, INPUT_PULLDOWN);
+  pinMode(HAND_SENSOR_PIN, INPUT);
   // pinMode(SEC_BUTTON_PIN, INPUT_PULLDOWN);
 
   if (!LittleFS.begin()) {
@@ -105,9 +145,19 @@ void setup() {
 }
 
 void loop() {
+  lv_timer_handler();
   wifi.reconnect_loop();
   alarms.loop();
   motor.loop();
+
+  static long hand_sensor_tk;
+  if (bounce(&hand_sensor_tk)) {
+    char msg[100];
+    memset(msg, 0, sizeof(msg));
+    // TODO define calibration values and make it a system of sorts
+    snprintf(msg, sizeof(msg), "HS Val: %d", analogRead(HAND_SENSOR_PIN));
+    Serial.println(msg);
+  }
 
   // static long ring_forecast_tk;
   // if (bounce(&ring_forecast_tk)) {

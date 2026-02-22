@@ -26,19 +26,19 @@ class Adafruit_GFX : public Print {
     @param color  16-bit pixel color.
   */
   /**********************************************************************/
-  virtual void drawPixel(int16_t x, int16_t y, uint32_t color) = 0;
+  virtual void drawPixel(int16_t x, int16_t y, uint16_t color) = 0;
 
   // TRANSACTION API / CORE DRAW API
   // These MAY be overridden by the subclass to provide device-specific
   // optimized code.  Otherwise 'generic' versions are used.
   virtual void startWrite(void);
-  virtual void writePixel(int16_t x, int16_t y, uint32_t color);
+  virtual void writePixel(int16_t x, int16_t y, uint16_t color);
   virtual void writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                             uint32_t color);
-  virtual void writeFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  virtual void writeFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+                             uint16_t color);
+  virtual void writeFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  virtual void writeFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   virtual void writeLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                         uint32_t color);
+                         uint16_t color);
   virtual void endWrite(void);
 
   // CONTROL API
@@ -52,46 +52,46 @@ class Adafruit_GFX : public Print {
   // optimized code.  Otherwise 'generic' versions are used.
 
   // It's good to implement those, even if using transaction API
-  virtual void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  virtual void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  virtual void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  virtual void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   virtual void fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                        uint32_t color);
-  virtual void fillScreen(uint32_t color);
+                        uint16_t color);
+  virtual void fillScreen(uint16_t color);
   // Optional and probably not necessary to change
   virtual void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                        uint32_t color);
+                        uint16_t color);
   virtual void drawRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                        uint32_t color);
+                        uint16_t color);
 
   // These exist only with Adafruit_GFX (no subclass overrides)
-  void drawCircle(int16_t x0, int16_t y0, int16_t r, uint32_t color);
+  void drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
   void drawCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername,
-                        uint32_t color);
-  void fillCircle(int16_t x0, int16_t y0, int16_t r, uint32_t color);
+                        uint16_t color);
+  void fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
   void fillCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername,
-                        int16_t delta, uint32_t color);
+                        int16_t delta, uint16_t color);
   void drawEllipse(int16_t x0, int16_t y0, int16_t rw, int16_t rh,
-                   uint32_t color);
+                   uint16_t color);
   void fillEllipse(int16_t x0, int16_t y0, int16_t rw, int16_t rh,
-                   uint32_t color);
+                   uint16_t color);
   void drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
-                    int16_t y2, uint32_t color);
+                    int16_t y2, uint16_t color);
   void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
-                    int16_t y2, uint32_t color);
+                    int16_t y2, uint16_t color);
   void drawRoundRect(int16_t x0, int16_t y0, int16_t w, int16_t h,
-                     int16_t radius, uint32_t color);
+                     int16_t radius, uint16_t color);
   void fillRoundRect(int16_t x0, int16_t y0, int16_t w, int16_t h,
-                     int16_t radius, uint32_t color);
+                     int16_t radius, uint16_t color);
   void drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w,
-                  int16_t h, uint32_t color);
+                  int16_t h, uint16_t color);
   void drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w,
-                  int16_t h, uint32_t color, uint16_t bg);
+                  int16_t h, uint16_t color, uint16_t bg);
   void drawBitmap(int16_t x, int16_t y, uint8_t* bitmap, int16_t w, int16_t h,
-                  uint32_t color);
+                  uint16_t color);
   void drawBitmap(int16_t x, int16_t y, uint8_t* bitmap, int16_t w, int16_t h,
-                  uint32_t color, uint16_t bg);
+                  uint16_t color, uint16_t bg);
   void drawXBitmap(int16_t x, int16_t y, const uint8_t bitmap[], int16_t w,
-                   int16_t h, uint32_t color);
+                   int16_t h, uint16_t color);
   void drawGrayscaleBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
                            int16_t w, int16_t h);
   void drawGrayscaleBitmap(int16_t x, int16_t y, uint8_t* bitmap, int16_t w,
@@ -108,9 +108,9 @@ class Adafruit_GFX : public Print {
                      const uint8_t mask[], int16_t w, int16_t h);
   void drawRGBBitmap(int16_t x, int16_t y, uint16_t* bitmap, uint8_t* mask,
                      int16_t w, int16_t h);
-  void drawChar(int16_t x, int16_t y, unsigned char c, uint32_t color,
+  void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
                 uint16_t bg, uint8_t size);
-  void drawChar(int16_t x, int16_t y, unsigned char c, uint32_t color,
+  void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
                 uint16_t bg, uint8_t size_x, uint8_t size_y);
   void getTextBounds(const char* string, int16_t x, int16_t y, int16_t* x1,
                      int16_t* y1, uint16_t* w, uint16_t* h);
@@ -312,10 +312,10 @@ class GFXcanvas1 : public Adafruit_GFX {
  public:
   GFXcanvas1(uint16_t w, uint16_t h, bool allocate_buffer = true);
   ~GFXcanvas1(void);
-  void drawPixel(int16_t x, int16_t y, uint32_t color);
-  void fillScreen(uint32_t color);
-  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  void drawPixel(int16_t x, int16_t y, uint16_t color);
+  void fillScreen(uint16_t color);
+  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   bool getPixel(int16_t x, int16_t y) const;
 
   /**********************************************************************/
@@ -328,8 +328,8 @@ class GFXcanvas1 : public Adafruit_GFX {
 
  protected:
   bool getRawPixel(int16_t x, int16_t y) const;
-  void drawFastRawVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  void drawFastRawHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  void drawFastRawVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void drawFastRawHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   uint8_t* buffer;    ///< Raster data: no longer private, allow subclass access
   bool buffer_owned;  ///< If true, destructor will free buffer, else it will do
                       ///< nothing
@@ -346,10 +346,10 @@ class GFXcanvas8 : public Adafruit_GFX {
  public:
   GFXcanvas8(uint16_t w, uint16_t h, bool allocate_buffer = true);
   ~GFXcanvas8(void);
-  void drawPixel(int16_t x, int16_t y, uint32_t color);
-  void fillScreen(uint32_t color);
-  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  void drawPixel(int16_t x, int16_t y, uint16_t color);
+  void fillScreen(uint16_t color);
+  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   uint8_t getPixel(int16_t x, int16_t y) const;
 
   /**********************************************************************/
@@ -362,8 +362,8 @@ class GFXcanvas8 : public Adafruit_GFX {
 
  protected:
   uint8_t getRawPixel(int16_t x, int16_t y) const;
-  void drawFastRawVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  void drawFastRawHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  void drawFastRawVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void drawFastRawHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   uint8_t* buffer;    ///< Raster data: no longer private, allow subclass access
   bool buffer_owned;  ///< If true, destructor will free buffer, else it will do
                       ///< nothing
@@ -374,11 +374,11 @@ class GFXcanvas16 : public Adafruit_GFX {
  public:
   GFXcanvas16(uint16_t w, uint16_t h, bool allocate_buffer = true);
   ~GFXcanvas16(void);
-  void drawPixel(int16_t x, int16_t y, uint32_t color);
-  void fillScreen(uint32_t color);
+  void drawPixel(int16_t x, int16_t y, uint16_t color);
+  void fillScreen(uint16_t color);
   void byteSwap(void);
-  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   uint16_t getPixel(int16_t x, int16_t y) const;
 
   /**********************************************************************/
@@ -391,8 +391,8 @@ class GFXcanvas16 : public Adafruit_GFX {
 
  protected:
   uint16_t getRawPixel(int16_t x, int16_t y) const;
-  void drawFastRawVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  void drawFastRawHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  void drawFastRawVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void drawFastRawHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   uint16_t* buffer;   ///< Raster data: no longer private, allow subclass access
   bool buffer_owned;  ///< If true, destructor will free buffer, else it will do
                       ///< nothing
@@ -403,11 +403,11 @@ class GFXcanvas18 : public Adafruit_GFX {
  public:
   GFXcanvas18(uint16_t w, uint16_t h, bool allocate_buffer = true);
   ~GFXcanvas18(void);
-  void drawPixel(int16_t x, int16_t y, uint32_t color);
-  void fillScreen(uint32_t color);
+  void drawPixel(int16_t x, int16_t y, uint16_t color);
+  void fillScreen(uint16_t color);
   void byteSwap(void);
-  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   uint16_t getPixel(int16_t x, int16_t y) const;
 
   /**********************************************************************/
@@ -420,8 +420,8 @@ class GFXcanvas18 : public Adafruit_GFX {
 
  protected:
   uint16_t getRawPixel(int16_t x, int16_t y) const;
-  void drawFastRawVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  void drawFastRawHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+  void drawFastRawVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void drawFastRawHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   uint32_t* buffer;   ///< Raster data: no longer private, allow subclass access
   bool buffer_owned;  ///< If true, destructor will free buffer, else it will do
                       ///< nothing

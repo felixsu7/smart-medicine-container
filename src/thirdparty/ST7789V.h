@@ -79,32 +79,31 @@
 #define COLOR_DARKGRAY 0x101010
 
 class ST7789V : public Adafruit_GFX {
-
  public:
   ST7789V(int8_t DC, int8_t CS);
 
   void setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
   void writeAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h),
-      writeColor(uint32_t color),
-      writeColor(uint8_t r6, uint8_t g6, uint8_t b6),
-      fillScreen(uint32_t color),
-      drawPixel(int16_t x, int16_t y, uint32_t color),
-      drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color),
-      drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color),
-      fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint32_t color),
+      writeColor(uint16_t color),
+      writeColor(uint8_t r5, uint8_t g6, uint8_t b5),
+      fillScreen(uint16_t color),
+      drawPixel(int16_t x, int16_t y, uint16_t color),
+      drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color),
+      drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color),
+      fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color),
       invertDisplay(boolean i), init(uint16_t width, uint16_t height);
   uint32_t ditherColor(uint8_t r, uint8_t g, uint8_t b);
 
   void drawImage(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t* img);
 
   void startWrite(void);
-  void writePixel(int16_t x, int16_t y, uint32_t color);
+  void writePixel(int16_t x, int16_t y, uint16_t color);
   void writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                     uint32_t color);
-  void writeFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color);
-  void writeFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color);
+                     uint16_t color);
+  void writeFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
+  void writeFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
   // void writeLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-  // uint32_t color);
+  // uint16_t color);
   void endWrite(void);
 
   void partialDisplay(boolean mode);
@@ -122,7 +121,7 @@ class ST7789V : public Adafruit_GFX {
   uint32_t rgbWheel(int idx);
 
   void displayInit(const uint8_t* addr), spiwrite(uint8_t),
-      transfer24(uint32_t), writecommand(uint8_t c), writedata(uint8_t d);
+      writecommand(uint8_t c), writedata(uint8_t d);
 
  private:
   inline void CS_HIGH(void);

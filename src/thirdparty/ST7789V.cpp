@@ -8,7 +8,7 @@ static const uint8_t init_commands[] = {
 
     ST7789_SLPOUT, ST_CMD_DELAY, 255,
 
-    ST7789_COLMOD, 1 + ST_CMD_DELAY, 0b01100110, 10,
+    ST7789_COLMOD, 1 + ST_CMD_DELAY, 0b01010101, 10,
 
     ST7789_MADCTL, 1, 0b10100000,
 
@@ -95,32 +95,32 @@ void ST7789V::setAddrWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
   // writecommand(ST7789_RAMWR);  // write to RAM
 }
 
-inline void ST7789V::writeColor(uint32_t color) {
-  transfer24(color);
+inline void ST7789V::writeColor(uint16_t color) {
+  SPI.transfer16(color);
 }
 
-inline void ST7789V::writeColor(uint8_t r6, uint8_t g6, uint8_t b6) {
-  SPI.transfer(r6 << 2);
+inline void ST7789V::writeColor(uint8_t r5, uint8_t g6, uint8_t b5) {
+  SPI.transfer(r5 << 2);
   SPI.transfer(g6 << 2);
-  SPI.transfer(b6 << 2);
+  SPI.transfer(b5 << 2);
 }
 
-void ST7789V::writePixel(int16_t x, int16_t y, uint32_t color) {
+void ST7789V::writePixel(int16_t x, int16_t y, uint16_t color) {
   if ((x < 0) || (x >= _width) || (y < 0) || (y >= _height))
     return;
 
   writeAddrWindow(x, y, 2, 2);
 
-  transfer24(color);
+  SPI.transfer16(color);
 }
 
-void ST7789V::drawPixel(int16_t x, int16_t y, uint32_t color) {
+void ST7789V::drawPixel(int16_t x, int16_t y, uint16_t color) {
   startWrite();
   writePixel(x, y, color);
   endWrite();
 }
 
-void ST7789V::writeFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) {
+void ST7789V::writeFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) {
   if ((x >= _width) || (y >= _height))
     return;
   if ((x + w - 1) >= _width)
@@ -128,17 +128,17 @@ void ST7789V::writeFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) {
   writeAddrWindow(x, y, w, 1);
 
   while (w--) {
-    transfer24(color);
+    SPI.transfer16(color);
   }
 }
 
-void ST7789V::drawFastHLine(int16_t x, int16_t y, int16_t w, uint32_t color) {
+void ST7789V::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) {
   startWrite();
   writeFastHLine(x, y, w, color);
   endWrite();
 }
 
-void ST7789V::writeFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color) {
+void ST7789V::writeFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) {
   if ((x >= _width) || (y >= _height))
     return;
   if ((y + h - 1) >= _height)
@@ -146,11 +146,11 @@ void ST7789V::writeFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color) {
   writeAddrWindow(x, y, 1, h);
 
   while (h--) {
-    transfer24(color);
+    SPI.transfer16(color);
   }
 }
 
-void ST7789V::drawFastVLine(int16_t x, int16_t y, int16_t h, uint32_t color) {
+void ST7789V::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) {
   startWrite();
   writeFastVLine(x, y, h, color);
   endWrite();
@@ -160,7 +160,7 @@ void ST7789V::drawImage(int16_t x, int16_t y, int16_t w, int16_t h,
                         uint8_t* img) {}
 
 void ST7789V::writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                            uint32_t color) {
+                            uint16_t color) {
   // rudimentary clipping (drawChar w/big text requires this)
   if (x >= _width || y >= _height || w <= 0 || h <= 0) {
     return;
@@ -174,18 +174,18 @@ void ST7789V::writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h,
   writeAddrWindow(x, y, w, h);
 
   for (int i = w * h; i > 0; i--) {
-    transfer24(color);
+    SPI.transfer16(color);
   }
 }
 
 void ST7789V::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                       uint32_t color) {
+                       uint16_t color) {
   startWrite();
   writeFillRect(x, y, w, h, color);
   endWrite();
 }
 
-void ST7789V::fillScreen(uint32_t color) {
+void ST7789V::fillScreen(uint16_t color) {
   fillRect(0, 0, _width, _height, color);
 }
 
@@ -373,11 +373,13 @@ void ST7789V::endWrite(void) {
   SPI.endTransaction();
 }
 
+/*
 inline void ST7789V::transfer24(uint32_t c) {
   SPI.transfer(c >> 16);
   SPI.transfer(c >> 8);
   SPI.transfer(c);
 }
+*/
 
 void ST7789V::writecommand(uint8_t c) {
   DC_LOW();

@@ -130,7 +130,7 @@ Adafruit_GFX::Adafruit_GFX(int16_t w, int16_t h) : WIDTH(w), HEIGHT(h) {
 */
 /**************************************************************************/
 void Adafruit_GFX::writeLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                             uint32_t color) {
+                             uint16_t color) {
 #if defined(ESP8266)
   yield();
 #endif
@@ -187,7 +187,7 @@ void Adafruit_GFX::startWrite() {}
    @param    color 16-bit 5-6-5 Color to fill with
 */
 /**************************************************************************/
-void Adafruit_GFX::writePixel(int16_t x, int16_t y, uint32_t color) {
+void Adafruit_GFX::writePixel(int16_t x, int16_t y, uint16_t color) {
   drawPixel(x, y, color);
 }
 
@@ -202,7 +202,7 @@ void Adafruit_GFX::writePixel(int16_t x, int16_t y, uint32_t color) {
 */
 /**************************************************************************/
 void Adafruit_GFX::writeFastVLine(int16_t x, int16_t y, int16_t h,
-                                  uint32_t color) {
+                                  uint16_t color) {
   // Overwrite in subclasses if startWrite is defined!
   // Can be just writeLine(x, y, x, y+h-1, color);
   // or writeFillRect(x, y, 1, h, color);
@@ -220,7 +220,7 @@ void Adafruit_GFX::writeFastVLine(int16_t x, int16_t y, int16_t h,
 */
 /**************************************************************************/
 void Adafruit_GFX::writeFastHLine(int16_t x, int16_t y, int16_t w,
-                                  uint32_t color) {
+                                  uint16_t color) {
   // Overwrite in subclasses if startWrite is defined!
   // Example: writeLine(x, y, x+w-1, y, color);
   // or writeFillRect(x, y, w, 1, color);
@@ -239,7 +239,7 @@ void Adafruit_GFX::writeFastHLine(int16_t x, int16_t y, int16_t w,
 */
 /**************************************************************************/
 void Adafruit_GFX::writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                                 uint32_t color) {
+                                 uint16_t color) {
   // Overwrite in subclasses if desired!
   fillRect(x, y, w, h, color);
 }
@@ -263,7 +263,7 @@ void Adafruit_GFX::endWrite() {}
 */
 /**************************************************************************/
 void Adafruit_GFX::drawFastVLine(int16_t x, int16_t y, int16_t h,
-                                 uint32_t color) {
+                                 uint16_t color) {
   startWrite();
   writeLine(x, y, x, y + h - 1, color);
   endWrite();
@@ -280,7 +280,7 @@ void Adafruit_GFX::drawFastVLine(int16_t x, int16_t y, int16_t h,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawFastHLine(int16_t x, int16_t y, int16_t w,
-                                 uint32_t color) {
+                                 uint16_t color) {
   startWrite();
   writeLine(x, y, x + w - 1, y, color);
   endWrite();
@@ -298,7 +298,7 @@ void Adafruit_GFX::drawFastHLine(int16_t x, int16_t y, int16_t w,
 */
 /**************************************************************************/
 void Adafruit_GFX::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                            uint32_t color) {
+                            uint16_t color) {
   startWrite();
   for (int16_t i = x; i < x + w; i++) {
     writeFastVLine(i, y, h, color);
@@ -313,7 +313,7 @@ void Adafruit_GFX::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
     @param    color 16-bit 5-6-5 Color to fill with
 */
 /**************************************************************************/
-void Adafruit_GFX::fillScreen(uint32_t color) {
+void Adafruit_GFX::fillScreen(uint16_t color) {
   fillRect(0, 0, _width, _height, color);
 }
 
@@ -328,7 +328,7 @@ void Adafruit_GFX::fillScreen(uint32_t color) {
 */
 /**************************************************************************/
 void Adafruit_GFX::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                            uint32_t color) {
+                            uint16_t color) {
   // Update in subclasses if desired!
   if (x0 == x1) {
     if (y0 > y1)
@@ -356,7 +356,7 @@ void Adafruit_GFX::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawEllipse(int16_t x0, int16_t y0, int16_t rw, int16_t rh,
-                               uint32_t color) {
+                               uint16_t color) {
 #if defined(ESP8266)
   yield();
 #endif
@@ -415,7 +415,7 @@ void Adafruit_GFX::drawEllipse(int16_t x0, int16_t y0, int16_t rw, int16_t rh,
 */
 /**************************************************************************/
 void Adafruit_GFX::fillEllipse(int16_t x0, int16_t y0, int16_t rw, int16_t rh,
-                               uint32_t color) {
+                               uint16_t color) {
 #if defined(ESP8266)
   yield();
 #endif
@@ -470,7 +470,7 @@ void Adafruit_GFX::fillEllipse(int16_t x0, int16_t y0, int16_t rw, int16_t rh,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawCircle(int16_t x0, int16_t y0, int16_t r,
-                              uint32_t color) {
+                              uint16_t color) {
 #if defined(ESP8266)
   yield();
 #endif
@@ -520,7 +520,7 @@ void Adafruit_GFX::drawCircle(int16_t x0, int16_t y0, int16_t r,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawCircleHelper(int16_t x0, int16_t y0, int16_t r,
-                                    uint8_t cornername, uint32_t color) {
+                                    uint8_t cornername, uint16_t color) {
   int16_t f = 1 - r;
   int16_t ddF_x = 1;
   int16_t ddF_y = -2 * r;
@@ -565,7 +565,7 @@ void Adafruit_GFX::drawCircleHelper(int16_t x0, int16_t y0, int16_t r,
 */
 /**************************************************************************/
 void Adafruit_GFX::fillCircle(int16_t x0, int16_t y0, int16_t r,
-                              uint32_t color) {
+                              uint16_t color) {
   startWrite();
   writeFastVLine(x0, y0 - r, 2 * r + 1, color);
   fillCircleHelper(x0, y0, r, 3, 0, color);
@@ -586,7 +586,7 @@ void Adafruit_GFX::fillCircle(int16_t x0, int16_t y0, int16_t r,
 /**************************************************************************/
 void Adafruit_GFX::fillCircleHelper(int16_t x0, int16_t y0, int16_t r,
                                     uint8_t corners, int16_t delta,
-                                    uint32_t color) {
+                                    uint16_t color) {
 
   int16_t f = 1 - r;
   int16_t ddF_x = 1;
@@ -637,7 +637,7 @@ void Adafruit_GFX::fillCircleHelper(int16_t x0, int16_t y0, int16_t r,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                            uint32_t color) {
+                            uint16_t color) {
   startWrite();
   writeFastHLine(x, y, w, color);
   writeFastHLine(x, y + h - 1, w, color);
@@ -658,7 +658,7 @@ void Adafruit_GFX::drawRect(int16_t x, int16_t y, int16_t w, int16_t h,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawRoundRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                                 int16_t r, uint32_t color) {
+                                 int16_t r, uint16_t color) {
   int16_t max_radius = ((w < h) ? w : h) / 2;  // 1/2 minor axis
   if (r > max_radius)
     r = max_radius;
@@ -688,7 +688,7 @@ void Adafruit_GFX::drawRoundRect(int16_t x, int16_t y, int16_t w, int16_t h,
 */
 /**************************************************************************/
 void Adafruit_GFX::fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                                 int16_t r, uint32_t color) {
+                                 int16_t r, uint16_t color) {
   int16_t max_radius = ((w < h) ? w : h) / 2;  // 1/2 minor axis
   if (r > max_radius)
     r = max_radius;
@@ -714,7 +714,7 @@ void Adafruit_GFX::fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                                int16_t x2, int16_t y2, uint32_t color) {
+                                int16_t x2, int16_t y2, uint16_t color) {
   drawLine(x0, y0, x1, y1, color);
   drawLine(x1, y1, x2, y2, color);
   drawLine(x2, y2, x0, y0, color);
@@ -733,7 +733,7 @@ void Adafruit_GFX::drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
 */
 /**************************************************************************/
 void Adafruit_GFX::fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                                int16_t x2, int16_t y2, uint32_t color) {
+                                int16_t x2, int16_t y2, uint16_t color) {
 
   int16_t a, b, y, last;
 
@@ -831,7 +831,7 @@ void Adafruit_GFX::fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
-                              int16_t w, int16_t h, uint32_t color) {
+                              int16_t w, int16_t h, uint16_t color) {
 
   int16_t byteWidth = (w + 7) / 8;  // Bitmap scanline pad = whole byte
   uint8_t b = 0;
@@ -865,7 +865,7 @@ void Adafruit_GFX::drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
 */
 /**************************************************************************/
 void Adafruit_GFX::drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
-                              int16_t w, int16_t h, uint32_t color,
+                              int16_t w, int16_t h, uint16_t color,
                               uint16_t bg) {
 
   int16_t byteWidth = (w + 7) / 8;  // Bitmap scanline pad = whole byte
@@ -897,7 +897,7 @@ void Adafruit_GFX::drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
 */
 /**************************************************************************/
 void Adafruit_GFX::drawBitmap(int16_t x, int16_t y, uint8_t* bitmap, int16_t w,
-                              int16_t h, uint32_t color) {
+                              int16_t h, uint16_t color) {
 
   int16_t byteWidth = (w + 7) / 8;  // Bitmap scanline pad = whole byte
   uint8_t b = 0;
@@ -931,7 +931,7 @@ void Adafruit_GFX::drawBitmap(int16_t x, int16_t y, uint8_t* bitmap, int16_t w,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawBitmap(int16_t x, int16_t y, uint8_t* bitmap, int16_t w,
-                              int16_t h, uint32_t color, uint16_t bg) {
+                              int16_t h, uint16_t color, uint16_t bg) {
 
   int16_t byteWidth = (w + 7) / 8;  // Bitmap scanline pad = whole byte
   uint8_t b = 0;
@@ -965,7 +965,7 @@ void Adafruit_GFX::drawBitmap(int16_t x, int16_t y, uint8_t* bitmap, int16_t w,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawXBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
-                               int16_t w, int16_t h, uint32_t color) {
+                               int16_t w, int16_t h, uint16_t color) {
 
   int16_t byteWidth = (w + 7) / 8;  // Bitmap scanline pad = whole byte
   uint8_t b = 0;
@@ -1229,7 +1229,7 @@ void Adafruit_GFX::drawRGBBitmap(int16_t x, int16_t y, uint16_t* bitmap,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
-                            uint32_t color, uint16_t bg, uint8_t size) {
+                            uint16_t color, uint16_t bg, uint8_t size) {
   drawChar(x, y, c, color, bg, size, size);
 }
 
@@ -1248,7 +1248,7 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
 */
 /**************************************************************************/
 void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
-                            uint32_t color, uint16_t bg, uint8_t size_x,
+                            uint16_t color, uint16_t bg, uint8_t size_x,
                             uint8_t size_y) {
 
   if (!gfxFont) {  // 'Classic' built-in font
@@ -1919,7 +1919,7 @@ GFXcanvas1::~GFXcanvas1(void) {
     @param  color Binary (on or off) color to fill with
 */
 /**************************************************************************/
-void GFXcanvas1::drawPixel(int16_t x, int16_t y, uint32_t color) {
+void GFXcanvas1::drawPixel(int16_t x, int16_t y, uint16_t color) {
   if (buffer) {
     if ((x < 0) || (y < 0) || (x >= _width) || (y >= _height))
       return;
@@ -2019,7 +2019,7 @@ bool GFXcanvas1::getRawPixel(int16_t x, int16_t y) const {
     @param  color Binary (on or off) color to fill with
 */
 /**************************************************************************/
-void GFXcanvas1::fillScreen(uint32_t color) {
+void GFXcanvas1::fillScreen(uint16_t color) {
   if (buffer) {
     uint32_t bytes = ((WIDTH + 7) / 8) * HEIGHT;
     memset(buffer, color ? 0xFF : 0x00, bytes);
@@ -2036,7 +2036,7 @@ void GFXcanvas1::fillScreen(uint32_t color) {
 */
 /**************************************************************************/
 void GFXcanvas1::drawFastVLine(int16_t x, int16_t y, int16_t h,
-                               uint32_t color) {
+                               uint16_t color) {
 
   if (h < 0) {  // Convert negative heights to positive equivalent
     h *= -1;
@@ -2092,7 +2092,7 @@ void GFXcanvas1::drawFastVLine(int16_t x, int16_t y, int16_t h,
 */
 /**************************************************************************/
 void GFXcanvas1::drawFastHLine(int16_t x, int16_t y, int16_t w,
-                               uint32_t color) {
+                               uint16_t color) {
   if (w < 0) {  // Convert negative widths to positive equivalent
     w *= -1;
     x -= w - 1;
@@ -2147,7 +2147,7 @@ void GFXcanvas1::drawFastHLine(int16_t x, int16_t y, int16_t w,
 */
 /**************************************************************************/
 void GFXcanvas1::drawFastRawVLine(int16_t x, int16_t y, int16_t h,
-                                  uint32_t color) {
+                                  uint16_t color) {
   // x & y already in raw (rotation 0) coordinates, no need to transform.
   int16_t row_bytes = ((WIDTH + 7) / 8);
   uint8_t* ptr = &buffer[(x / 8) + y * row_bytes];
@@ -2185,7 +2185,7 @@ void GFXcanvas1::drawFastRawVLine(int16_t x, int16_t y, int16_t h,
 */
 /**************************************************************************/
 void GFXcanvas1::drawFastRawHLine(int16_t x, int16_t y, int16_t w,
-                                  uint32_t color) {
+                                  uint16_t color) {
   // x & y already in raw (rotation 0) coordinates, no need to transform.
   int16_t rowBytes = ((WIDTH + 7) / 8);
   uint8_t* ptr = &buffer[(x / 8) + y * rowBytes];
@@ -2280,7 +2280,7 @@ GFXcanvas8::~GFXcanvas8(void) {
     @param  color 8-bit Color to fill with. Only lower byte of uint16_t is used.
 */
 /**************************************************************************/
-void GFXcanvas8::drawPixel(int16_t x, int16_t y, uint32_t color) {
+void GFXcanvas8::drawPixel(int16_t x, int16_t y, uint16_t color) {
   if (buffer) {
     if ((x < 0) || (y < 0) || (x >= _width) || (y >= _height))
       return;
@@ -2361,7 +2361,7 @@ uint8_t GFXcanvas8::getRawPixel(int16_t x, int16_t y) const {
     @param  color 8-bit Color to fill with. Only lower byte of uint16_t is used.
 */
 /**************************************************************************/
-void GFXcanvas8::fillScreen(uint32_t color) {
+void GFXcanvas8::fillScreen(uint16_t color) {
   if (buffer) {
     memset(buffer, color, WIDTH * HEIGHT);
   }
@@ -2378,7 +2378,7 @@ void GFXcanvas8::fillScreen(uint32_t color) {
 */
 /**************************************************************************/
 void GFXcanvas8::drawFastVLine(int16_t x, int16_t y, int16_t h,
-                               uint32_t color) {
+                               uint16_t color) {
   if (h < 0) {  // Convert negative heights to positive equivalent
     h *= -1;
     y -= h - 1;
@@ -2434,7 +2434,7 @@ void GFXcanvas8::drawFastVLine(int16_t x, int16_t y, int16_t h,
 */
 /**************************************************************************/
 void GFXcanvas8::drawFastHLine(int16_t x, int16_t y, int16_t w,
-                               uint32_t color) {
+                               uint16_t color) {
 
   if (w < 0) {  // Convert negative widths to positive equivalent
     w *= -1;
@@ -2491,7 +2491,7 @@ void GFXcanvas8::drawFastHLine(int16_t x, int16_t y, int16_t w,
 */
 /**************************************************************************/
 void GFXcanvas8::drawFastRawVLine(int16_t x, int16_t y, int16_t h,
-                                  uint32_t color) {
+                                  uint16_t color) {
   // x & y already in raw (rotation 0) coordinates, no need to transform.
   uint8_t* buffer_ptr = buffer + y * WIDTH + x;
   for (int16_t i = 0; i < h; i++) {
@@ -2511,7 +2511,7 @@ void GFXcanvas8::drawFastRawVLine(int16_t x, int16_t y, int16_t h,
 */
 /**************************************************************************/
 void GFXcanvas8::drawFastRawHLine(int16_t x, int16_t y, int16_t w,
-                                  uint32_t color) {
+                                  uint16_t color) {
   // x & y already in raw (rotation 0) coordinates, no need to transform.
   memset(buffer + y * WIDTH + x, color, w);
 }
@@ -2557,7 +2557,7 @@ GFXcanvas16::~GFXcanvas16(void) {
     @param  color 16-bit 5-6-5 Color to fill with
 */
 /**************************************************************************/
-void GFXcanvas16::drawPixel(int16_t x, int16_t y, uint32_t color) {
+void GFXcanvas16::drawPixel(int16_t x, int16_t y, uint16_t color) {
   if (buffer) {
     if ((x < 0) || (y < 0) || (x >= _width) || (y >= _height))
       return;
@@ -2638,7 +2638,7 @@ uint16_t GFXcanvas16::getRawPixel(int16_t x, int16_t y) const {
     @param  color 16-bit 5-6-5 Color to fill with
 */
 /**************************************************************************/
-void GFXcanvas16::fillScreen(uint32_t color) {
+void GFXcanvas16::fillScreen(uint16_t color) {
   if (buffer) {
     uint8_t hi = color >> 8, lo = color & 0xFF;
     if (hi == lo) {
@@ -2682,7 +2682,7 @@ void GFXcanvas16::byteSwap(void) {
 */
 /**************************************************************************/
 void GFXcanvas16::drawFastVLine(int16_t x, int16_t y, int16_t h,
-                                uint32_t color) {
+                                uint16_t color) {
   if (h < 0) {  // Convert negative heights to positive equivalent
     h *= -1;
     y -= h - 1;
@@ -2737,7 +2737,7 @@ void GFXcanvas16::drawFastVLine(int16_t x, int16_t y, int16_t h,
 */
 /**************************************************************************/
 void GFXcanvas16::drawFastHLine(int16_t x, int16_t y, int16_t w,
-                                uint32_t color) {
+                                uint16_t color) {
   if (w < 0) {  // Convert negative widths to positive equivalent
     w *= -1;
     x -= w - 1;
@@ -2792,7 +2792,7 @@ void GFXcanvas16::drawFastHLine(int16_t x, int16_t y, int16_t w,
 */
 /**************************************************************************/
 void GFXcanvas16::drawFastRawVLine(int16_t x, int16_t y, int16_t h,
-                                   uint32_t color) {
+                                   uint16_t color) {
   // x & y already in raw (rotation 0) coordinates, no need to transform.
   uint16_t* buffer_ptr = buffer + y * WIDTH + x;
   for (int16_t i = 0; i < h; i++) {
@@ -2811,7 +2811,7 @@ void GFXcanvas16::drawFastRawVLine(int16_t x, int16_t y, int16_t h,
 */
 /**************************************************************************/
 void GFXcanvas16::drawFastRawHLine(int16_t x, int16_t y, int16_t w,
-                                   uint32_t color) {
+                                   uint16_t color) {
   // x & y already in raw (rotation 0) coordinates, no need to transform.
   uint32_t buffer_index = y * WIDTH + x;
   for (uint32_t i = buffer_index; i < buffer_index + w; i++) {
