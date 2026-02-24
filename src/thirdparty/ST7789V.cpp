@@ -157,7 +157,15 @@ void ST7789V::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) {
 }
 
 void ST7789V::drawImage(int16_t x, int16_t y, int16_t w, int16_t h,
-                        uint8_t* img) {}
+                        uint16_t* img) {
+  startWrite();
+  writeAddrWindow(x, y, w + 1, h + 1);
+  // TODO FIXME very inefficent, use non-blocking DMA with callbacks in the future
+  for (int i = 0; i < (w + 1) * (h + 1); i++) {
+    SPI.transfer16(img[i]);
+  }
+  endWrite();
+}
 
 void ST7789V::writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h,
                             uint16_t color) {

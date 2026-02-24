@@ -23,7 +23,7 @@
 #include "XPT2046.h"
 #include <Arduino.h>
 
-#define Z_THRESHOLD 125
+#define Z_THRESHOLD 1000
 #define Z_THRESHOLD_INT 75
 #define MSEC_THRESHOLD 10
 #define SPI_SETTING SPISettings(1000000, MSBFIRST, SPI_MODE0)
@@ -52,6 +52,11 @@ void isrPin(void) {
 TS_Point XPT2046::getPoint() {
   update();
   return TS_Point(xraw, yraw, zraw);
+}
+
+int clamp(int n, int lower, int upper) {
+  n = (n > lower) * n + !(n > lower) * lower;
+  return (n < upper) * n + !(n < upper) * upper;
 }
 
 bool XPT2046::tirqTouched() {
@@ -166,8 +171,8 @@ void XPT2046::update() {
   if (z >= Z_THRESHOLD) {
     msraw = now;  // good read completed, set wait
     if (cal.defined) {
-      xraw = cal.alphaX * x + cal.betaX * y + cal.deltaX;
-      yraw = cal.alphaY * x + cal.betaY * y + cal.deltaY;
+      xraw = clamp(cal.alphaX * x + cal.betaX * y + cal.deltaX, 0, 320);
+      yraw = clamp(cal.alphaY * x + cal.betaY * y + cal.deltaY, 0, 240);
 
       // Serial.printf("  cal: %d,%d\n", xraw, yraw);
     } else {

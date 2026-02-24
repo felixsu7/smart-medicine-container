@@ -94,7 +94,7 @@ class ST7789V : public Adafruit_GFX {
       invertDisplay(boolean i), init(uint16_t width, uint16_t height);
   uint32_t ditherColor(uint8_t r, uint8_t g, uint8_t b);
 
-  void drawImage(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t* img);
+  void drawImage(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t* img);
 
   void startWrite(void);
   void writePixel(int16_t x, int16_t y, uint16_t color);
