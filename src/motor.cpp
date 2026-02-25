@@ -139,3 +139,7 @@ int Motor::calibrate(int steps) {
 
   return 0;
 }
+
+bool Motor::is_running(void) {
+  return stepper.getStepsLeft() > 0;
+}

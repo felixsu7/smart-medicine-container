@@ -5,15 +5,15 @@
 #include "HTTPClient.h"
 #include "LittleFS.h"
 #include "PsychicHttpServer.h"
-#include "alarm.h"
 #include "clock.h"
 #include "endpoints/endpoints.h"
+#include "menu/alarm.h"
 #include "motor.h"
-#include "thirdparty/ST7789V.h"
+#include "ui.h"
 
 static const char* TAG = "webserver";
 
-int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft, SMS* sms) {
+int Webserver::setup(Alarms* alarms) {
   // TODO
   assert(MDNS.begin(DEFAULT_HOSTNAME));
   assert(MDNS.addService("http", "tcp", 80));
@@ -201,44 +201,6 @@ int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft, SMS* sms) {
               return res->finishChunking();
             });
 
-  server.on("/filltest", HTTP_POST,
-            [=](PsychicRequest* req, PsychicResponse* res) {
-              if (!req->hasParam("color")) {
-                return res->send(400);
-              }
-
-              tft->fillScreen(req->getParam("color")->value().toInt() & 0xFFF);
-
-              return res->send(200);
-            });
-
-  server.on("/recttest", HTTP_POST,
-            [=](PsychicRequest* req, PsychicResponse* res) {
-              if (!req->hasParam("x")) {
-                return res->send(400);
-              }
-              if (!req->hasParam("y")) {
-                return res->send(400);
-              }
-              if (!req->hasParam("w")) {
-                return res->send(400);
-              }
-              if (!req->hasParam("h")) {
-                return res->send(400);
-              }
-              if (!req->hasParam("c")) {
-                return res->send(400);
-              }
-
-              tft->fillRect(req->getParam("x")->value().toInt(),
-                            req->getParam("y")->value().toInt(),
-                            req->getParam("w")->value().toInt(),
-                            req->getParam("h")->value().toInt(),
-                            req->getParam("c")->value().toInt());
-
-              return res->send(200);
-            });
-
   server.on("/attend", HTTP_POST,
             [=](PsychicRequest* req, PsychicResponse* res) {
               if (!req->hasParam("idx")) {
@@ -249,7 +211,7 @@ int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft, SMS* sms) {
               Alarm alarm;
               assert(alarms->get(idx, &alarm) == 0);
 
-              if (alarms->attend_idx(idx, time(NULL), 0x00, motor) != 0) {
+              if (alarms->attend_idx(idx, time(NULL), 0x00) != 0) {
                 return res->send(500);
               }
 
@@ -303,14 +265,14 @@ int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft, SMS* sms) {
                   buf, sizeof(buf),
                   "<progress hx-post=\"/motor_pos_htmx\" hx-trigger=\"every "
                   "1s\" hx-swap=\"outerHTML\" value=\"%d\" max=\"4096\" />",
-                  motor->steps());
+                  smc_motor_steps());
               return res->send(buf);
             });
 
   server.on("/compartment_pos_htmx", HTTP_GET,
             [=](PsychicRequest* req, PsychicResponse* res) {
               char buf[10];
-              snprintf(buf, sizeof(buf), "%d", motor->compartment());
+              snprintf(buf, sizeof(buf), "%d", smc_motor_compartment());
               return res->send(buf);
             });
 
@@ -355,7 +317,7 @@ int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft, SMS* sms) {
               memset(buf, 0, sizeof(buf));
 
               ESP_LOGD(TAG, "sim TX: %s", msg);
-              sms->IO(msg, buf, sizeof(buf), ms);
+              // sms->IO(msg, buf, sizeof(buf), ms);
               ESP_LOGD(TAG, "sim RX: %s", buf);
 
               return res->send(200, "text/plain", buf);
@@ -372,7 +334,7 @@ int Webserver::setup(Alarms* alarms, Motor* motor, ST7789V* tft, SMS* sms) {
       return res->send(400);
     }
     compartment--;
-    assert(motor->spin_to(compartment) == 0);
+    smc_motor_move(compartment);
 
     return res->send(200);
   });

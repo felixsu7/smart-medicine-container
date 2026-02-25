@@ -3,7 +3,6 @@
 
 #include <ctime>
 #include "./config.h"
-#include "motor.h"
 
 static const char ALARM_VERSION = 0x00;
 
@@ -62,7 +61,7 @@ class Alarms {
 
   // Attends the currently ringing alarm. Returns 0 on success, -1 if there is
   // none ringing. flags is currently unused.
-  int attend(time_t when, char flags, Motor* motor);
+  int attend(time_t when, char flags);
 
   // Ring without an associated alarm at a schedule, overrides all alarms and
   // disables refreshes.
@@ -97,7 +96,7 @@ class Alarms {
   int append_log(int idx, const struct AlarmLog* log);
 
   // TODO Marks an alarm in the storage at index.
-  int attend_idx(int idx, time_t when, char flags, Motor* motor);
+  int attend_idx(int idx, time_t when, char flags);
 
   // Returns when any alarm in the storage will ring in seconds since the UNIX
   // epoch, and copies that alarm to the alarm. This does not account for
@@ -109,6 +108,9 @@ class Alarms {
   // since GMT+0 midnight. This does not account for missed alarms. Returns -1
   // if today is out of bounds. Returns -2 if alarm data is invalid.
   static int next_schedule(const struct Alarm* alarm, char today, int sec);
+
+  // Returns the index of the compartment that the steppper motor should move to.
+  int should_move(void);
 
   // Returns the seconds since the UNIX timestamp of when the alarm will ring
   // based on seconds since today's midnight. Returns -1 if alarm is invalid.
@@ -130,6 +132,8 @@ class Alarms {
   // (one-off). Second flag (2) is if refreshing should be disabled, usually
   // combined with the first flag.
   char ringing_flags;
+  // Last ringed alarm's compartment.
+  char last_compartment;
 };
 
 #endif

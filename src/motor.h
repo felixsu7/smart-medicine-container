@@ -17,6 +17,7 @@ class Motor {
 
   int steps(void);
   int compartment(void);
+  bool is_running(void);
 
   int spin_to(int compartment);
   int calibrate(int steps);

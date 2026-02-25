@@ -1,8 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <esp32-hal-log.h>
 #include <cstdio>
-
 #include "mutex"
 
 static std::mutex fs_mutex;
@@ -16,5 +16,10 @@ int hexdump(char* dest, const void* src, size_t size);
 // otherwise. Basically for limiting function calls per a period of time. renew
 // will update the timekeeper regardless of state, good for button pressses.
 bool bounce(time_t* timekeeper, int bounce_ms = 1000, bool renew = false);
+
+#define SMC_LOGD ESP_LOGD
+#define SMC_LOGI ESP_LOGI
+#define SMC_LOGW ESP_LOGW
+#define SMC_LOGE ESP_LOGE
 
 #endif

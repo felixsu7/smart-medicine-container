@@ -1,48 +1,46 @@
 #include "./alarm.h"
-#include <Esp.h>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include "LittleFS.h"
+#include "./ui.h"
 #include "config.h"
-#include "esp32-hal-log.h"
-#include "motor.h"
 #include "time.h"
 #include "utils.h"
 
 static const char* TAG = "alarm";
 
 int Alarms::load_from_fs(void) {
-  fs_mutex.lock();
-  File file = LittleFS.open(ALARMS_PATH, FILE_READ);
-  if (!file) {
-    file.close();
-    fs_mutex.unlock();
-    ESP_LOGW(TAG, "no saved data at %s, ignoring", ALARMS_PATH);
-    return -1;
-  }
-  assert(!file.isDirectory());
-
-  size_t res = file.readBytes((char*)this, sizeof(Alarms));
-  if (res != sizeof(Alarms)) {
-    file.close();
-    fs_mutex.unlock();
-    ESP_LOGE(TAG, "reading from %s, res %d, size %d", ALARMS_PATH, res,
-             sizeof(Alarms));
-    return -2;
-  };
-
-  file.close();
-  fs_mutex.unlock();
+  assert(smc_fs_read(ALARMS_PATH, this, sizeof(Alarms)) == 0);
+  // fs_mutex.lock();
+  // File file = LittleFS.open(ALARMS_PATH, FILE_READ);
+  // if (!file) {
+  //   file.close();
+  //   fs_mutex.unlock();
+  //   ESP_LOGW(TAG, "no saved data at %s, ignoring", ALARMS_PATH);
+  //   return -1;
+  // }
+  // assert(!file.isDirectory());
+  //
+  // size_t res = file.readBytes((char*)this, sizeof(Alarms));
+  // if (res != sizeof(Alarms)) {
+  //   file.close();
+  //   fs_mutex.unlock();
+  //   SMC_LOGE(TAG, "reading from %s, res %d, size %d", ALARMS_PATH, res,
+  //            sizeof(Alarms));
+  //   return -2;
+  // };
+  //
+  // file.close();
+  // fs_mutex.unlock();
 
   // TODO DEBUG
   char dump[256 * 3 + 1];
   int dump_res = hexdump(dump, this, sizeof(Alarms));
-  ESP_LOGD(TAG, "first %d bytes dump of %s: %s", 256, ALARMS_PATH, dump);
+  SMC_LOGD(TAG, "first %d bytes dump of %s: %s", 256, ALARMS_PATH, dump);
 
   if (version != ALARM_VERSION) {
-    ESP_LOGE(TAG, "unsupported version: %02X", version);
+    SMC_LOGE(TAG, "unsupported version: %02X", version);
     return -3;
   }
 
@@ -50,24 +48,24 @@ int Alarms::load_from_fs(void) {
 }
 
 int Alarms::save_into_fs(void) {
-  fs_mutex.lock();
-  File file = LittleFS.open(ALARMS_PATH, FILE_WRITE);
-
-  assert(file && !file.isDirectory());
-
-  assert(file.write((const uint8_t*)this, sizeof(Alarms)) == sizeof(Alarms));
+  return smc_fs_write(ALARMS_PATH, this, sizeof(Alarms));
+  // fs_mutex.lock();
+  // File file = LittleFS.open(ALARMS_PATH, FILE_WRITE);
+  //
+  // assert(file && !file.isDirectory());
+  //
+  // assert(file.write((const uint8_t*)this, sizeof(Alarms)) == sizeof(Alarms));
   // assert(file.write(version) == 1);
   //
   // for (int i = 0; i < MAX_ALARMS; i++) {
   //   assert(file.write((uint8_t *)&list[i], sizeof(Alarm)) == sizeof(Alarm));
   // }
   //
-  // ESP_LOGD(TAG, "write err is %d", file.getWriteError());
+  // SMC_LOGD(TAG, "write err is %d", file.getWriteError());
+  // file.close();
+  // fs_mutex.unlock();
 
-  file.close();
-  fs_mutex.unlock();
-
-  return 0;
+  // return 0;
 }
 
 void Alarms::loop(void) {
@@ -76,7 +74,7 @@ void Alarms::loop(void) {
   }
 
   if (time(NULL) > when_ring) {
-    // ESP_LOGD(TAG, "%ld, %ld", time(NULL), when_ring);
+    // SMC_LOGD(TAG, "%ld, %ld", time(NULL), when_ring);
     ring(earliest_idx);
   }
 }
@@ -92,7 +90,7 @@ int Alarms::ring(int idx) {
   return 0;
 }
 
-int Alarms::attend(time_t when, char flags, Motor* motor) {
+int Alarms::attend(time_t when, char flags) {
   if (ringing_flags & 1) {
     ringing_flags = !ringing_flags;
     ringing_flags |= 3;
@@ -105,7 +103,7 @@ int Alarms::attend(time_t when, char flags, Motor* motor) {
       return -1;
     }
 
-    assert(attend_idx(earliest_idx, when, flags, motor) == 0);
+    assert(attend_idx(earliest_idx, when, flags) == 0);
   }
   // TODO
   struct tm now;
@@ -116,14 +114,12 @@ int Alarms::attend(time_t when, char flags, Motor* motor) {
   return 0;
 }
 
-int Alarms::attend_idx(int idx, time_t when, char flags, Motor* motor) {
+int Alarms::attend_idx(int idx, time_t when, char flags) {
   if (idx < 0 || idx >= MAX_ALARMS) {
     return -1;
   }
 
-  if (motor != NULL) {
-    motor->spin_to(list[idx].compartment);
-  }
+  last_compartment = list[idx].compartment;
 
   list[idx].lastReminded = when;
   AlarmLog log;
@@ -131,7 +127,7 @@ int Alarms::attend_idx(int idx, time_t when, char flags, Motor* motor) {
   log.flags = 0x00;
 
   int err = append_log(idx, &log);
-  ESP_LOGD(TAG, "append_log err is %d", err);
+  SMC_LOGD(TAG, "append_log err is %d", err);
   assert(err >= 0);
 
   earliest_idx = -1;
@@ -155,7 +151,7 @@ int Alarms::refresh(const struct tm* now) {
 
   int idx;
   time_t when = earliest_alarm(now, NULL, &idx);
-  ESP_LOGD(TAG, "when: %ld", when);
+  SMC_LOGD(TAG, "when: %ld", when);
   if (when < 0) {
     return -1;
   }
@@ -273,7 +269,7 @@ int Alarms::append_log(int idx, const struct AlarmLog* log) {
       return 0;
     }
 
-    ESP_LOGD(TAG, "idx %d when %ld", i, list[idx].logs[i].when);
+    SMC_LOGD(TAG, "idx %d when %ld", i, list[idx].logs[i].when);
 
     if (oldest_when < list[idx].logs[i].when) {
       oldest_when = list[idx].logs[i].when;
@@ -295,26 +291,26 @@ int Alarms::next_schedule(const struct Alarm* alarm, char today,
     return -2;
   }
 
-  // ESP_LOGD(TAG, "today %d", today);
-  // ESP_LOGD(TAG, "days %d", alarm->days);
+  // SMC_LOGD(TAG, "today %d", today);
+  // SMC_LOGD(TAG, "days %d", alarm->days);
 
   // TODO FIXME maybe this could be better.
   for (int i = 0; i < 8; i++) {
-    // ESP_LOGD(TAG, "i %d", i);
+    // SMC_LOGD(TAG, "i %d", i);
     // Find which days after today matches the alarm days, or something.
     if (alarm->days & (SUNDAY >> ((today + i) % 7))) {
-      // ESP_LOGD(TAG, "true 1");
+      // SMC_LOGD(TAG, "true 1");
       // In case if there is a match today originally, check if the schedule is
       // behind the current second.
       if (i == 0 && alarm->secondMark < today_sec) {
-        // ESP_LOGD(TAG, "true 2");
+        // SMC_LOGD(TAG, "true 2");
         continue;
       }
 
       return alarm->secondMark + (i * 24 * 60 * 60) - today_sec;
     }
 
-    // ESP_LOGD(TAG, "false 1");
+    // SMC_LOGD(TAG, "false 1");
   }
 
   // UNREACHABLE
@@ -328,7 +324,7 @@ time_t Alarms::earliest_alarm(const struct tm* now, struct Alarm* alarm,
   }
 
   Alarm* earliest = NULL;
-  int earliest_second = INT_MAX;
+  int earliest_second = 0xFFFFFFFF;
   int earliest_idx = -1;
   int today_sec = (now->tm_hour * 60 * 60) + (now->tm_min * 60) + now->tm_sec;
 
@@ -376,13 +372,17 @@ time_t Alarms::earliest_alarm(const struct tm* now, struct Alarm* alarm,
   }
 }
 
+int Alarms::should_move(void) {
+  return last_compartment;
+}
+
 int Alarms::setup(void) {
   // TODO DEBUG
   if (int err = load_from_fs(); err == -2) {
-    assert(LittleFS.format());
-    esp_restart();
+    smc_data_reset();
+    smc_device_restart();
   } else if (err < -2) {
-    ESP_LOGE(TAG, "err is %d", err);
+    SMC_LOGE(TAG, "err is %d", err);
     assert(false);
   };
 
@@ -408,10 +408,10 @@ int Alarms::setup(void) {
   //
   // int today_sec = (now.tm_hour * 60 * 60) + (now.tm_min * 60) + now.tm_sec;
   //
-  // ESP_LOGD(TAG, "earliest: %s", test.name);
-  // ESP_LOGD(TAG, "%s: %d", list[0].name, next_schedule(&list[0], 0,
-  // today_sec)); ESP_LOGD(TAG, "%s: %d", list[1].name, next_schedule(&list[1],
-  // 0, today_sec)); ESP_LOGD(TAG, "%s: %d", list[2].name,
+  // SMC_LOGD(TAG, "earliest: %s", test.name);
+  // SMC_LOGD(TAG, "%s: %d", list[0].name, next_schedule(&list[0], 0,
+  // today_sec)); SMC_LOGD(TAG, "%s: %d", list[1].name, next_schedule(&list[1],
+  // 0, today_sec)); SMC_LOGD(TAG, "%s: %d", list[2].name,
   // next_schedule(&list[2], 0, today_sec));
   //
   return 0;

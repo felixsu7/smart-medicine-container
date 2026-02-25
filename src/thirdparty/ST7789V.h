@@ -57,26 +57,8 @@
 #define ST7789_MADCTL_ML 0x10
 #define ST7789_MADCTL_RGB 0x00
 
-// Color definitions
-// A color is 18bit but ST7789V accepts these as 24bit values, ignoring the 2 least significant bits per byte.
-// FC is 0b1111110, 7C is 01111100 (half of FC)
-#define COLOR_BLACK 0x000000
-#define COLOR_RED 0xFC0000
-#define COLOR_ROSE 0xFC007C
-#define COLOR_MAGENTA 0xFC00FC
-#define COLOR_VIOLET 0x7C00FC
-#define COLOR_BLUE 0x0000FC
-#define COLOR_AZURE 0x007CFC
-#define COLOR_CYAN 0x00FCFC
-#define COLOR_SPRING_GREEN 0x00FC7C
-#define COLOR_GREEN 0x00FC00
-#define COLOR_CHARTREUSE 0x7CFC00
-#define COLOR_YELLOW 0xFCFC00
-#define COLOR_ORANGE 0xFC7C00
-#define COLOR_WHITE 0xFCFCFC
-#define COLOR_GRAY 0x7C7C7C
-#define COLOR_LIGHTGRAY 0x2F2F2F
-#define COLOR_DARKGRAY 0x101010
+uint16_t const SCREEN_WIDTH = 320;
+uint16_t const SCREEN_HEIGHT = 240;
 
 class ST7789V : public Adafruit_GFX {
  public:
