@@ -4,4 +4,4 @@ compile_commands.json
 compile_commands.json.bak
 .framework
 .ccls
-src/config.h
+src/menu/config.h

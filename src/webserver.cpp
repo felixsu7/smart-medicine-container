@@ -1,7 +1,7 @@
 #include <./webserver.h>
 #include <ESPmDNS.h>
 #include <string.h>
-#include "./config.h"
+#include "./menu/config.h"
 #include "HTTPClient.h"
 #include "LittleFS.h"
 #include "PsychicHttpServer.h"

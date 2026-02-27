@@ -1,20 +1,26 @@
 #include "./menu/../ui.h"
+#include "./menu/alarm.h"
 #include "stdlib.h"
 
 int smc_init_drivers(void);
 void smc_loop(void);
 
 // interface
-int smc_motor_steps(void);
+int smc_motor_steps(void)
+{
+    return 67 * 7;
+};
+
 int smc_motor_compartment(void);
 void smc_motor_move(int compartment)
 {
     printf("SMC motor moves to %d\n", compartment);
 };
+
 bool smc_motor_running(void);
 
 int smc_sms_send(char * message, char * number);
-int smc_sms_list(SMC_SMSMessage ** dest, int max_len);
+int smc_sms_list(struct SMC_SMSMessage ** dest, int max_len);
 int smc_sms_signal(void);
 
 int smc_wifi_add(struct SMC_WifiConfig * cfg);
@@ -22,23 +28,56 @@ int smc_wifi_remove(char * name);
 int smc_wifi_connect(char * name);
 int smc_wifi_disconnect(void);
 int smc_wifi_signal(void);
-int smc_wifi_scan(SMC_WifiConfig ** dest, int max_len);
+int smc_wifi_scan(struct SMC_WifiConfig ** dest, int max_len);
 int smc_wifi_ap(bool state, char * pass);
 
-void smc_alarm_buzzer_play(struct SMC_Melody);
-void smc_alarm_buzzer_off(void);
+static bool buzzer_playing;
+void smc_alarm_buzzer_play(struct SMC_Melody)
+{
+    if(!buzzer_playing) {
+        printf("SMC buzzer started playing");
+        buzzer_playing = true;
+    }
+};
+void smc_alarm_buzzer_off(void)
+{
+    if(buzzer_playing) {
+        printf("SMC buzzer stopped playing");
+        buzzer_playing = false;
+    }
+};
 
-time_t smc_time_get(void);
+Alarms * smc_system_alarms(void)
+{
+    static Alarms alarms = Alarms();
+    Alarm alarm;
+    for(int i = 0; i < 5; i++) {
+        char name[20];
+        snprintf(name, sizeof(name), "Test %d", i);
+        strcpy(alarm.name, name);
+        alarm.days = 0xF;
+        alarms.add(&alarm);
+    }
+    return &alarms;
+};
+
+time_t smc_time_get(void)
+{
+    return time(NULL);
+};
 
 int smc_battery_percentage(void);
 int smc_battery_powermode(void);
 void smc_battery_set_powermode(int mode);
 
-int smc_preferences_load(void);
-int smc_preferences_save(void);
-
-int smc_fs_read(const char * path, void * dest, size_t len);
-int smc_fs_write(const char * path, const void * src, size_t len);
+int smc_fs_read(const char * path, void * dest, size_t len)
+{
+    return 0;
+};
+int smc_fs_write(const char * path, const void * src, size_t len)
+{
+    return 0;
+};
 
 void smc_data_reset(void);
 void smc_device_restart(void);

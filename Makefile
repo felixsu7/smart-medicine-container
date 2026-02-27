@@ -18,3 +18,7 @@ refresh:
 
 check:
 	pio check
+
+smc:
+	cd lv_port_linux
+	cmake --build build -j8

@@ -1,6 +1,6 @@
 #include "./clock.h"
 #include <thirdparty/uRTCLib.h>
-#include "./config.h"
+#include "./menu/config.h"
 #include "WiFi.h"
 
 static const char* TAG = "clock";

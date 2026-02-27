@@ -8,5 +8,6 @@
 #endif
 
 void test_menu(void);
+void smc_internal_loop(void);
 
 #endif

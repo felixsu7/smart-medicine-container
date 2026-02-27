@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.11)
 project(lvgl)
 
 option(WERROR "Treat warnings as errors for LVGL targets" OFF)
-option(ASAN "Enable Sanitizer Options" OFF)
+option(ASAN "Enable Sanitier Options" OFF)
 
 # Set policy to allow to run the target_link_libraries cmd on targets that are build
 # in another directory.
@@ -376,7 +376,7 @@ else()
     set(USE_EXTERNAL_DEMOS OFF)
 endif()
 
-if(USE_EXTERNAL_DEMOS)
+if(false)
     message("Including external demos")
     include(FetchContent)
     FetchContent_Declare(lv_demos_ext GIT_REPOSITORY https://github.com/lvgl/lv_demos)
@@ -393,6 +393,7 @@ target_include_directories(lvgl PUBLIC ${PKG_CONFIG_INC})
 # Library type is determined by BUILD_SHARED_LIBS (shared if ON, static if OFF)
 add_library(lvgl_linux ${LV_LINUX_SRC} ${LV_LINUX_BACKEND_SRC})
 target_include_directories(lvgl_linux PUBLIC ${PKG_CONFIG_INC})
+
 
 # If LVGL is configured to use LV_CONF_PATH or Kconfig
 # Set the exactly the same definitions on the lvgl_linux target

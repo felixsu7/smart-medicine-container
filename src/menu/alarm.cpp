@@ -3,15 +3,15 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include "./ui.h"
+#include "../ui.h"
 #include "config.h"
 #include "time.h"
-#include "utils.h"
 
 static const char* TAG = "alarm";
 
 int Alarms::load_from_fs(void) {
-  assert(smc_fs_read(ALARMS_PATH, this, sizeof(Alarms)) == 0);
+  int code = smc_fs_read(ALARMS_PATH, this, sizeof(Alarms));
+
   // fs_mutex.lock();
   // File file = LittleFS.open(ALARMS_PATH, FILE_READ);
   // if (!file) {
@@ -35,16 +35,16 @@ int Alarms::load_from_fs(void) {
   // fs_mutex.unlock();
 
   // TODO DEBUG
-  char dump[256 * 3 + 1];
-  int dump_res = hexdump(dump, this, sizeof(Alarms));
-  SMC_LOGD(TAG, "first %d bytes dump of %s: %s", 256, ALARMS_PATH, dump);
+  //  char dump[256 * 3 + 1];
+  // int dump_res = hexdump(dump, this, sizeof(Alarms));
+  // SMC_LOGD(TAG, "first %d bytes dump of %s: %s", 256, ALARMS_PATH, dump);
+  //
+  // if (version != ALARM_VERSION) {
+  //   SMC_LOGE(TAG, "unsupported version: %02X", version);
+  //   return -3;
+  // }
 
-  if (version != ALARM_VERSION) {
-    SMC_LOGE(TAG, "unsupported version: %02X", version);
-    return -3;
-  }
-
-  return 0;
+  return code;
 }
 
 int Alarms::save_into_fs(void) {
@@ -127,7 +127,7 @@ int Alarms::attend_idx(int idx, time_t when, char flags) {
   log.flags = 0x00;
 
   int err = append_log(idx, &log);
-  SMC_LOGD(TAG, "append_log err is %d", err);
+  // SMC_LOGD(TAG, "append_log err is %d", err);
   assert(err >= 0);
 
   earliest_idx = -1;
@@ -151,7 +151,7 @@ int Alarms::refresh(const struct tm* now) {
 
   int idx;
   time_t when = earliest_alarm(now, NULL, &idx);
-  SMC_LOGD(TAG, "when: %ld", when);
+  // SMC_LOGD(TAG, "when: %ld", when);
   if (when < 0) {
     return -1;
   }
@@ -195,7 +195,7 @@ int Alarms::one_off_ring(time_t when) {
 int Alarms::add(const struct Alarm* alarm) {
   // FIXME?
   int err = set(-1, alarm);
-  ESP_LOGW(TAG, "err add is %d", err);
+  // ESP_LOGW(TAG, "err add is %d", err);
   if (err == -3) {
     return -2;
   }
@@ -269,7 +269,7 @@ int Alarms::append_log(int idx, const struct AlarmLog* log) {
       return 0;
     }
 
-    SMC_LOGD(TAG, "idx %d when %ld", i, list[idx].logs[i].when);
+    // SMC_LOGD(TAG, "idx %d when %ld", i, list[idx].logs[i].when);
 
     if (oldest_when < list[idx].logs[i].when) {
       oldest_when = list[idx].logs[i].when;
@@ -382,7 +382,7 @@ int Alarms::setup(void) {
     smc_data_reset();
     smc_device_restart();
   } else if (err < -2) {
-    SMC_LOGE(TAG, "err is %d", err);
+    // SMC_LOGE(TAG, "err is %d", err);
     assert(false);
   };
 

@@ -3,6 +3,8 @@
 
 #include <time.h>
 #include <cstdint>
+#include "./menu/alarm.h"
+#include "./menu/preferences.h"
 
 struct SMC_SMSMessage {
   char* content;
@@ -47,14 +49,14 @@ int smc_wifi_ap(bool state, char* pass);
 void smc_alarm_buzzer_play(struct SMC_Melody);
 void smc_alarm_buzzer_off(void);
 
+Alarms* smc_system_alarms(void);
+DevicePreferences* smc_system_preferences(void);
+
 time_t smc_time_get(void);
 
 int smc_battery_percentage(void);
 int smc_battery_powermode(void);
 void smc_battery_set_powermode(int mode);
-
-int smc_preferences_load(void);
-int smc_preferences_save(void);
 
 int smc_fs_read(const char* path, void* dest, size_t len);
 int smc_fs_write(const char* path, const void* src, size_t len);

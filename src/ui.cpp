@@ -106,6 +106,7 @@ int smc_init_drivers(void) {
 }
 
 void smc_loop(void) {
+  smc_internal_loop();
   lv_timer_handler();
   wifi.reconnect_loop();
   alarms.loop();
@@ -132,6 +133,10 @@ void smc_motor_move(int compartment) {
 bool smc_motor_running(void) {
   return motor.is_running();
 };
+
+struct Alarms* smc_system_alarms(void) {
+  return &alarms;
+}
 
 int smc_sms_send(char* message, char* number);
 int smc_sms_list(SMC_SMSMessage** dest, int max_len);
